@@ -214,16 +214,15 @@ class GuideMeChat {
         this.autoResizeTextarea();
 
         // Simulate assistant response
-        setTimeout(() => {
-            this.generateResponse(text);
-        }, 1000);
+        this.generateResponse(text);
     }
 
-    addMessage(role, content, imageUrl = null) {
+    addMessage(role, content, imageUrl = null, id = null) {
         const message = {
             role,
             content,
             imageUrl,
+            id: id || Date.now(),
             timestamp: new Date()
         };
 
@@ -232,8 +231,18 @@ class GuideMeChat {
         this.scrollToBottom();
 
         // Announce for screen readers
-        if (role === 'assistant') {
+        if (role === 'assistant' && content !== 'جاري التفكير...') {
             this.speak(content);
+        }
+    }
+
+    removeMessage(id) {
+        const index = this.messages.findIndex(m => m.id === id);
+        if (index !== -1) {
+            this.messages.splice(index, 1);
+            // Refresh messages area
+            this.messagesArea.innerHTML = '';
+            this.messages.forEach(m => this.renderMessage(m));
         }
     }
 
@@ -338,18 +347,36 @@ class GuideMeChat {
         this.messagesArea.appendChild(messageDiv);
     }
 
-    generateResponse(userMessage) {
-        // Simulate AI response (in real app, this would call an API)
-        const responses = [
-            'شكراً لك على رسالتك. أنا هنا لمساعدتك في أي شيء تحتاجه.',
-            'فهمت سؤالك. دعني أساعدك في ذلك.',
-            'هذا سؤال رائع! سأقدم لك المساعدة.',
-            'أنا موجود لخدمتك. كيف يمكنني مساعدتك أكثر؟',
-            'تم استلام رسالتك. سأعمل على مساعدتك الآن.'
-        ];
+    async generateResponse(userMessage) {
+        try {
+            // Add a thinking message
+            const thinkingId = Date.now();
+            this.addMessage('assistant', 'جاري التفكير...', null, thinkingId);
 
-        const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-        this.addMessage('assistant', randomResponse);
+            const response = await fetch(`${this.settings.aiUrl}/v1/chat/completions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: this.messages.slice(-5).map(m => ({
+                        role: m.role,
+                        content: m.content
+                    }))
+                })
+            });
+
+            if (!response.ok) throw new Error('سيرفر الدردشة لا يستجيب');
+
+            const data = await response.json();
+            const reply = data.choices[0].message.content;
+
+            // Remove thinking message and add real reply
+            this.removeMessage(thinkingId);
+            this.addMessage('assistant', reply);
+
+        } catch (error) {
+            console.error('Chat Error:', error);
+            this.announce('حدث خطأ في الاتصال بالسيرفر');
+        }
     }
 
     // ===================================
@@ -519,44 +546,37 @@ class GuideMeChat {
         this.addMessage('assistant', thinkingMsg);
         this.speak(thinkingMsg);
 
-        // Perform real analysis with Ollama
-        this.analyzeWithOllama(imageUrl);
+        // Send for vision analysis
+        this.analyzeWithVisionServer(imageUrl);
     }
 
-    async analyzeWithOllama(imageUrl) {
+    async analyzeWithVisionServer(imageUrl) {
         try {
-            // Clean base64 string
+            const thinkingId = Date.now();
+            this.addMessage('assistant', 'جاري تحليل الصورة بعيون دليل...', null, thinkingId);
+
             const base64Data = imageUrl.split(',')[1];
 
-            const response = await fetch(`${this.settings.aiUrl}/api/chat`, {
+            const response = await fetch(`${this.settings.aiUrl}/v1/vision/analyze`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    model: "qwen2-vl",
-                    messages: [{
-                        role: "user",
-                        content: "ماذا ترى في هذه الصورة؟ صفها بدقة لمكفوف باللغة العربية بأسلوب كلاسيكي هادئ.",
-                        images: [base64Data]
-                    }],
-                    stream: false
+                    image: base64Data,
+                    prompt: "ماذا ترى في هذه الصورة؟ صفها بدقة لمكفوف باللغة العربية بأسلوب دليل (باللهجة السعودية)."
                 })
             });
 
-            if (!response.ok) throw new Error('AI Server error');
+            if (!response.ok) throw new Error('سيرفر الرؤية لا يستجيب');
 
             const data = await response.json();
-            const result = data.message.content;
+            const result = data.content;
 
-            // Remove the thinking message and add the real result
-            this.messagesArea.lastElementChild.remove();
+            this.removeMessage(thinkingId);
             this.addMessage('assistant', result);
 
         } catch (error) {
-            console.error('Ollama Error:', error);
-            if (this.messagesArea.lastElementChild && this.messagesArea.lastElementChild.classList.contains('assistant')) {
-                this.messagesArea.lastElementChild.remove();
-            }
-            this.addMessage('assistant', "عذراً، حدث خطأ في الاتصال بسيرفر الذكاء الاصطناعي على جهازك. تأكد من تشغيل Ollama ومودل Qwen2-VL.");
+            console.error('Vision Error:', error);
+            this.addMessage('assistant', "عذراً، ما قدرت أحلل الصورة. تأكد إن السيرفر شغال.");
         }
     }
 
@@ -586,7 +606,7 @@ class GuideMeChat {
             darkMode: false,
             highContrast: false,
             reduceMotion: false,
-            aiUrl: 'http://localhost:11434'
+            aiUrl: 'http://localhost:8000'
         };
     }
 
@@ -598,7 +618,7 @@ class GuideMeChat {
             darkMode: document.getElementById('dark-mode').checked,
             highContrast: document.getElementById('high-contrast').checked,
             reduceMotion: document.getElementById('reduce-motion').checked,
-            aiUrl: document.getElementById('ai-url').value || 'http://localhost:11434'
+            aiUrl: document.getElementById('ai-url').value || 'http://localhost:8000'
         };
 
         localStorage.setItem('guideme-settings', JSON.stringify(this.settings));
@@ -641,7 +661,7 @@ class GuideMeChat {
             document.getElementById('dark-mode').checked = this.settings.darkMode;
             document.getElementById('high-contrast').checked = this.settings.highContrast;
             document.getElementById('reduce-motion').checked = this.settings.reduceMotion;
-            document.getElementById('ai-url').value = this.settings.aiUrl;
+            document.getElementById('ai-url').value = this.settings.aiUrl || 'http://localhost:8000';
         }
     }
 
