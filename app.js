@@ -63,7 +63,10 @@ class GuideMeChat {
 
     setupEventListeners() {
         // Send message
-        this.sendBtn.addEventListener('click', () => this.sendMessage());
+        this.sendBtn.addEventListener('click', () => {
+            this.speak('إرسال');
+            this.sendMessage();
+        });
         this.messageInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -88,18 +91,36 @@ class GuideMeChat {
             if (!this.isCameraActive) this.speak('شوف بدالي');
             this.toggleCamera();
         });
-        this.closeCameraBtn.addEventListener('click', () => this.closeCamera());
+        this.closeCameraBtn.addEventListener('click', () => {
+            this.speak('إغلاق الكاميرا');
+            this.closeCamera();
+        });
         this.captureBtn.addEventListener('click', () => {
             this.speak('صور بدالي');
             this.captureImage();
         });
-        this.toggleCameraBtn.addEventListener('click', () => this.switchCamera());
+        this.toggleCameraBtn.addEventListener('click', () => {
+            this.speak('تبديل الكاميرا');
+            this.switchCamera();
+        });
 
         // Settings
-        this.settingsBtn.addEventListener('click', () => this.openSettings());
-        this.closeSettingsBtn.addEventListener('click', () => this.closeSettings());
-        this.cancelSettingsBtn.addEventListener('click', () => this.closeSettings());
-        this.modalOverlay.addEventListener('click', () => this.closeSettings());
+        this.settingsBtn.addEventListener('click', () => {
+            this.speak('الإعدادات');
+            this.openSettings();
+        });
+        this.closeSettingsBtn.addEventListener('click', () => {
+            this.speak('إغلاق الإعدادات');
+            this.closeSettings();
+        });
+        this.cancelSettingsBtn.addEventListener('click', () => {
+            this.speak('إلغاء');
+            this.closeSettings();
+        });
+        this.modalOverlay.addEventListener('click', () => {
+            this.speak('إغلاق الإعدادات');
+            this.closeSettings();
+        });
         this.settingsForm.addEventListener('submit', (e) => {
             e.preventDefault();
             this.saveSettings();
@@ -109,7 +130,10 @@ class GuideMeChat {
         this.setupSettingsControls();
 
         // New chat
-        this.newChatBtn.addEventListener('click', () => this.startNewChat());
+        this.newChatBtn.addEventListener('click', () => {
+            this.speak('محادثة جديدة');
+            this.startNewChat();
+        });
 
         // Escape key to close modals
         document.addEventListener('keydown', (e) => {
@@ -536,6 +560,7 @@ class GuideMeChat {
         };
 
         localStorage.setItem('guideme-settings', JSON.stringify(this.settings));
+        this.speak('تم حفظ الإعدادات');
         this.applySettings();
         this.closeSettings();
         this.announce('تم حفظ الإعدادات بنجاح');
