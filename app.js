@@ -606,7 +606,7 @@ class GuideMeChat {
             darkMode: false,
             highContrast: false,
             reduceMotion: false,
-            aiUrl: 'http://localhost:8000'
+            aiUrl: 'http://localhost:6000'
         };
     }
 
@@ -618,7 +618,7 @@ class GuideMeChat {
             darkMode: document.getElementById('dark-mode').checked,
             highContrast: document.getElementById('high-contrast').checked,
             reduceMotion: document.getElementById('reduce-motion').checked,
-            aiUrl: document.getElementById('ai-url').value || 'http://localhost:8000'
+            aiUrl: document.getElementById('ai-url').value || 'http://localhost:6000'
         };
 
         localStorage.setItem('guideme-settings', JSON.stringify(this.settings));
@@ -661,7 +661,7 @@ class GuideMeChat {
             document.getElementById('dark-mode').checked = this.settings.darkMode;
             document.getElementById('high-contrast').checked = this.settings.highContrast;
             document.getElementById('reduce-motion').checked = this.settings.reduceMotion;
-            document.getElementById('ai-url').value = this.settings.aiUrl || 'http://localhost:8000';
+            document.getElementById('ai-url').value = this.settings.aiUrl || 'http://localhost:6000';
         }
     }
 
