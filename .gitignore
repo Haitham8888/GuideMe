@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+models/
+.env
+*.log
+# التخزين المؤقت للموديلات من Hugging Face
+huggingface/
+hub/
