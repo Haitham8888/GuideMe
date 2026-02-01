@@ -37,9 +37,18 @@ async def chat_completions(request: Request):
     body = await request.json()
     messages = body.get("messages", [])
     
+    # إضافة لمسة سعودية للموديل (System Prompt)
+    system_instruction = {
+        "role": "system", 
+        "content": "أنت مساعد ذكي ومرح تتحدث باللهجة السعودية البيضاء العفوية. اسمك 'دليل'. تفاعل مع المتابعين كأنك ستريمر: استخدم كلمات مثل 'يا هلا'، 'أبشر'، 'من عيوني'، 'خلوكم معنا'. لا تتكلم بالفصحى الجامدة إلا لو طُلب منك. خلك خفيف دم وودود جداً."
+    }
+    
+    # دمج التعليمات مع الرسائل
+    full_messages = [system_instruction] + messages
+    
     # تحويل الرسائل لتنسيق الموديل
     text = tokenizer.apply_chat_template(
-        messages,
+        full_messages,
         tokenize=False,
         add_generation_prompt=True
     )
