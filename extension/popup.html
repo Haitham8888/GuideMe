@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GuideMe - لوحة التحكم</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 350px;
+            min-height: 400px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #0f172a;
+            direction: rtl;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 1.5rem;
+            text-align: center;
+            border-bottom: 3px solid #2563eb;
+        }
+
+        .logo {
+            font-size: 1.75rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #2563eb, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+
+        .content {
+            padding: 1.5rem;
+            background: white;
+        }
+
+        .control-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .control-group h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .control-btn {
+            width: 100%;
+            padding: 0.875rem;
+            background: linear-gradient(135deg, #2563eb, #1e40af);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .control-btn:active {
+            transform: translateY(0);
+        }
+
+        .control-btn.secondary {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .control-btn.warning {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        .control-btn.danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem;
+            background: #f8fafc;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .toggle-switch label {
+            font-size: 0.9375rem;
+            font-weight: 500;
+            color: #475569;
+            cursor: pointer;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #cbd5e1;
+            transition: 0.3s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: #10b981;
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(24px);
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            background: #dbeafe;
+            border-radius: 0.5rem;
+            border-right: 4px solid #2563eb;
+            margin-bottom: 1rem;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .status-text {
+            font-size: 0.875rem;
+            color: #1e40af;
+            font-weight: 500;
+        }
+
+        .footer {
+            padding: 1rem 1.5rem;
+            background: rgba(255, 255, 255, 0.95);
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+        }
+
+        .footer-link {
+            color: #2563eb;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .footer-link:hover {
+            text-decoration: underline;
+        }
+
+        .icon {
+            font-size: 1.25rem;
+        }
+
+        .divider {
+            height: 1px;
+            background: #e2e8f0;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1 class="logo">GuideMe</h1>
+        <p class="subtitle">مساعدك الذكي للتصفح الميسر</p>
+    </div>
+
+    <div class="content">
+        <div class="status-indicator" role="status" aria-live="polite">
+            <span class="status-dot" aria-hidden="true"></span>
+            <span class="status-text" id="status-text">الإضافة نشطة وجاهزة</span>
+        </div>
+
+        <div class="control-group">
+            <h3><span class="icon" aria-hidden="true">🎙️</span> الأوامر الصوتية</h3>
+            <div class="toggle-switch">
+                <label for="voice-toggle">تفعيل الأوامر الصوتية</label>
+                <label class="switch">
+                    <input type="checkbox" id="voice-toggle" aria-label="تفعيل أو إيقاف الأوامر الصوتية">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <h3><span class="icon" aria-hidden="true">🔧</span> أدوات التحسين</h3>
+            <button class="control-btn secondary" id="simplify-btn" aria-label="تبسيط الصفحة الحالية">
+                <span class="icon" aria-hidden="true">✨</span>
+                <span>تبسيط الصفحة</span>
+            </button>
+            <button class="control-btn secondary" id="enhance-btn" aria-label="تحسين إمكانية الوصول">
+                <span class="icon" aria-hidden="true">♿</span>
+                <span>تحسين الوصول</span>
+            </button>
+            <button class="control-btn warning" id="read-btn" aria-label="قراءة محتوى الصفحة">
+                <span class="icon" aria-hidden="true">📖</span>
+                <span>قراءة الصفحة</span>
+            </button>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="control-group">
+            <h3><span class="icon" aria-hidden="true">⚙️</span> إعدادات سريعة</h3>
+            <div class="toggle-switch">
+                <label for="auto-enhance">تحسين تلقائي للصفحات</label>
+                <label class="switch">
+                    <input type="checkbox" id="auto-enhance" aria-label="تفعيل التحسين التلقائي">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="toggle-switch">
+                <label for="high-contrast">وضع التباين العالي</label>
+                <label class="switch">
+                    <input type="checkbox" id="high-contrast" aria-label="تفعيل وضع التباين العالي">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <button class="control-btn" id="open-dashboard" aria-label="فتح لوحة التحكم الكاملة">
+            <span class="icon" aria-hidden="true">🎯</span>
+            <span>فتح لوحة التحكم</span>
+        </button>
+    </div>
+
+    <div class="footer">
+        <a href="#" class="footer-link" id="help-link">المساعدة والدعم</a>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+
+</html>
