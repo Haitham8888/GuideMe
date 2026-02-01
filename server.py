@@ -13,7 +13,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-MODEL_ID = "Qwen/Qwen2.5-14B-Instruct"
+MODEL_ID = "./models/Qwen2.5-14B-Instruct"
 
 print(f"Loading model {MODEL_ID} in 4-bit...")
 # إعداد الضغط ليتناسب مع 16GB VRAM
