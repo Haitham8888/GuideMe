@@ -18,7 +18,7 @@
     <a href="#chat-container" class="skip-link" aria-label="انتقل إلى منطقة المحادثة">انتقل إلى المحادثة</a>
 
     <!-- Header -->
-    <header class="app-header" role="banner">
+    <header class="app-header">
         <div class="header-content">
             <h1 class="logo" tabindex="0" aria-label="GuideMe - مساعدك الذكي">
                 <span class="logo-icon" aria-hidden="true">
@@ -31,7 +31,7 @@
                 </span>
                 <span class="logo-text">GuideMe</span>
             </h1>
-            <nav class="header-nav" role="navigation" aria-label="القائمة الرئيسية">
+            <nav class="header-nav" aria-label="قائمة التحكم">
                 <button class="nav-btn" id="new-chat-btn" aria-label="بدء محادثة جديدة">
                     <span class="btn-icon" aria-hidden="true">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -56,9 +56,9 @@
     </header>
 
     <!-- Main Chat Container -->
-    <main id="chat-container" class="chat-container" role="main" tabindex="-1">
+    <main id="chat-container" class="chat-container" tabindex="-1" aria-label="محتوى المحادثة">
         <!-- Welcome Screen -->
-        <div class="welcome-screen" id="welcome-screen" role="region" aria-labelledby="welcome-heading">
+        <div class="welcome-screen" id="welcome-screen" aria-labelledby="welcome-heading">
             <div class="welcome-content">
                 <div class="welcome-icon" aria-hidden="true">
                     <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -71,7 +71,7 @@
                 <h2 id="welcome-heading" class="welcome-title">مرحباً بك في GuideMe</h2>
                 <p class="welcome-subtitle">مساعدك الذكي المصمم خصيصاً لذوي الإعاقة البصرية</p>
 
-                <div class="welcome-features" role="list" aria-label="الميزات المتاحة">
+                <div class="welcome-features" aria-label="الميزات المتاحة">
                     <div class="feature-item" role="listitem">
                         <span class="feature-icon" aria-hidden="true">
                             <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
@@ -119,8 +119,8 @@
         </div>
 
         <!-- Chat Messages Area -->
-        <div class="messages-area" id="messages-area" role="log" aria-live="polite" aria-atomic="false"
-            aria-label="منطقة الرسائل">
+        <div class="messages-area" id="messages-area" aria-live="polite" aria-atomic="false"
+            aria-label="الرسائل المتبادلة">
             <!-- Messages will be added here dynamically -->
         </div>
 
@@ -163,7 +163,7 @@
     </main>
 
     <!-- Input Area -->
-    <footer class="input-area" role="region" aria-label="منطقة الإدخال">
+    <footer class="input-area" aria-label="أدوات الإدخال">
         <div class="input-container">
             <!-- Microphone Button -->
             <button class="input-action-btn mic-btn" id="mic-btn" aria-label="تسجيل رسالة صوتية" aria-pressed="false">
