@@ -514,10 +514,50 @@ class GuideMeChat {
 
         this.announce('تم التقاط الصورة وإرسالها');
 
-        // Simulate response
-        setTimeout(() => {
-            this.addMessage('assistant', 'تم استلام الصورة. سأقوم بتحليلها الآن...');
-        }, 1000);
+        // Simulate response while thinking
+        const thinkingMsg = "جاري تحليل الصورة... لحظة واحدة";
+        this.addMessage('assistant', thinkingMsg);
+        this.speak(thinkingMsg);
+
+        // Perform real analysis with Ollama
+        this.analyzeWithOllama(imageUrl);
+    }
+
+    async analyzeWithOllama(imageUrl) {
+        try {
+            // Clean base64 string
+            const base64Data = imageUrl.split(',')[1];
+
+            const response = await fetch(`${this.settings.aiUrl}/api/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: "qwen2-vl",
+                    messages: [{
+                        role: "user",
+                        content: "ماذا ترى في هذه الصورة؟ صفها بدقة لمكفوف باللغة العربية بأسلوب كلاسيكي هادئ.",
+                        images: [base64Data]
+                    }],
+                    stream: false
+                })
+            });
+
+            if (!response.ok) throw new Error('AI Server error');
+
+            const data = await response.json();
+            const result = data.message.content;
+
+            // Remove the thinking message and add the real result
+            this.messagesArea.lastElementChild.remove();
+            this.addMessage('assistant', result);
+
+        } catch (error) {
+            console.error('Ollama Error:', error);
+            if (this.messagesArea.lastElementChild && this.messagesArea.lastElementChild.classList.contains('assistant')) {
+                this.messagesArea.lastElementChild.remove();
+            }
+            this.addMessage('assistant', "عذراً، حدث خطأ في الاتصال بسيرفر الذكاء الاصطناعي على جهازك. تأكد من تشغيل Ollama ومودل Qwen2-VL.");
+        }
     }
 
     // ===================================
@@ -545,7 +585,8 @@ class GuideMeChat {
             fontSize: 'medium',
             darkMode: false,
             highContrast: false,
-            reduceMotion: false
+            reduceMotion: false,
+            aiUrl: 'http://localhost:11434'
         };
     }
 
@@ -556,7 +597,8 @@ class GuideMeChat {
             fontSize: document.getElementById('font-size').value,
             darkMode: document.getElementById('dark-mode').checked,
             highContrast: document.getElementById('high-contrast').checked,
-            reduceMotion: document.getElementById('reduce-motion').checked
+            reduceMotion: document.getElementById('reduce-motion').checked,
+            aiUrl: document.getElementById('ai-url').value || 'http://localhost:11434'
         };
 
         localStorage.setItem('guideme-settings', JSON.stringify(this.settings));
@@ -599,6 +641,7 @@ class GuideMeChat {
             document.getElementById('dark-mode').checked = this.settings.darkMode;
             document.getElementById('high-contrast').checked = this.settings.highContrast;
             document.getElementById('reduce-motion').checked = this.settings.reduceMotion;
+            document.getElementById('ai-url').value = this.settings.aiUrl;
         }
     }
 

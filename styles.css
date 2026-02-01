@@ -781,12 +781,13 @@ body {
     height: 6px;
     border-radius: var(--radius-sm);
     background: var(--bg-tertiary);
-    outline: none;
     -webkit-appearance: none;
+    appearance: none;
 }
 
 .range-control input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
+    appearance: none;
     width: 18px;
     height: 18px;
     border-radius: 50%;
