@@ -40,6 +40,7 @@ class GuideMeChat {
         this.cameraCanvas = document.getElementById('camera-canvas');
         this.captureBtn = document.getElementById('capture-btn');
         this.liveBroadcastBtn = document.getElementById('live-broadcast-btn');
+        this.footerLiveBtn = document.getElementById('footer-live-btn');
         this.recordingIndicator = document.getElementById('recording-indicator');
         this.recordingDuration = document.getElementById('recording-duration');
         this.settingsModal = document.getElementById('settings-modal');
@@ -61,10 +62,10 @@ class GuideMeChat {
         document.getElementById('close-camera-btn').addEventListener('click', () => this.closeCamera());
         this.captureBtn.addEventListener('click', () => this.captureImage());
 
-        this.liveBroadcastBtn.addEventListener('click', () => {
-            if (this.isLiveMode) this.stopLiveBroadcast();
-            else this.startLiveBroadcast();
-        });
+        this.liveBroadcastBtn.addEventListener('click', () => this.toggleLive());
+        if (this.footerLiveBtn) {
+            this.footerLiveBtn.addEventListener('click', () => this.toggleLive());
+        }
 
         document.getElementById('settings-btn').addEventListener('click', () => {
             this.settingsModal.hidden = false;
@@ -264,6 +265,61 @@ class GuideMeChat {
             this.addMessage('assistant', data.content);
         } catch (e) { this.removeMessage(tid); this.addMessage('assistant', 'خطأ في التحليل'); }
     }
+
+    toggleLive() {
+        if (this.isLiveMode) this.stopLiveBroadcast();
+        else this.startLiveBroadcast();
+    }
+
+    async startLiveBroadcast() {
+        if (!this.isCameraActive) await this.openCamera();
+
+        this.isLiveMode = true;
+        this.liveBroadcastBtn.classList.add('active');
+        if (this.footerLiveBtn) {
+            this.footerLiveBtn.classList.add('active');
+            this.footerLiveBtn.setAttribute('aria-pressed', 'true');
+        }
+        this.speak('بدأ البث المباشر. سأقوم بوصف ما أراه كل 5 ثوانٍ.');
+
+        this.liveInterval = setInterval(() => {
+            if (this.isLiveMode) this.captureLiveFrame();
+        }, 5000);
+    }
+
+    stopLiveBroadcast() {
+        this.isLiveMode = false;
+        this.liveBroadcastBtn.classList.remove('active');
+        if (this.footerLiveBtn) {
+            this.footerLiveBtn.classList.remove('active');
+            this.footerLiveBtn.setAttribute('aria-pressed', 'false');
+        }
+        clearInterval(this.liveInterval);
+        this.speak('تم إيقاف البث المباشر.');
+    }
+
+    captureLiveFrame() {
+        if (!this.isCameraActive) return;
+        const ctx = this.cameraCanvas.getContext('2d');
+        this.cameraCanvas.width = this.cameraVideo.videoWidth;
+        this.cameraCanvas.height = this.cameraVideo.videoHeight;
+        ctx.drawImage(this.cameraVideo, 0, 0);
+        const url = this.cameraCanvas.toDataURL('image/jpeg');
+        this.analyzeVisionForLive(url);
+    }
+
+    async analyzeVisionForLive(url) {
+        try {
+            const res = await fetch(`${this.settings.aiUrl}/v1/vision/analyze`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: url.split(',')[1] })
+            });
+            const data = await res.json();
+            this.addMessage('assistant', data.content);
+        } catch (e) { console.error('Live Vision Error:', e); }
+    }
+
 
     toggleRecording() {
         if (this.isRecording) {

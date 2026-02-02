@@ -1,12 +1,10 @@
 import os
 import base64
-import torch
+import httpx
 import uvicorn
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline, AutoProcessor, BitsAndBytesConfig
-from qwen_vl_utils import process_vision_info
 
 app = FastAPI()
 app.add_middleware(
@@ -16,39 +14,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- إعداد الموديلات الخفيفة والسريعة ---
-# نستخدم 3B للدردشة و 2B للرؤية لضمان سرعة استجابة هائلة
-CHAT_MODEL_ID = "Qwen/Qwen2.5-3B-Instruct"
-VISION_MODEL_ID = "Qwen/Qwen2-VL-2B-Instruct"
+# --- إعدادات Google Gemini API ---
+GEMINI_API_KEY = "AIzaSyCbSc3NfM7MxMVdMVmk9IIkd02qyomi8qY"
+# نستخدم v1beta للوصول لأحدث الميزات
+GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
 
-# إعدادات الضغط (Quantization) لجعل الموديلات "ريشة" على كرت الشاشة
-bnb_config = BitsAndBytesConfig(
-    load_in_4bit=True,
-    bnb_4bit_compute_dtype=torch.float16,
-    bnb_4bit_quant_type="nf4",
-    bnb_4bit_use_double_quant=True
-)
+# هوية المساعد الذكي
+SYSTEM_PROMPT = "أنت 'دليل' المساعد الذكي لمشروع GuideMe. مهمتك مساعدة المكفوفين. تتحدث باللهجة السعودية البيضاء الودودة. إجاباتك مختصرة ومفيدة جداً."
 
-print(f"--- جاري تشغيل النسخة الخفيفة والسريعة (Turbo Mode) ---")
-
-# 1. تحميل موديل الدردشة (Qwen 3B)
-print(f"جاري تحميل موديل الدردشة: {CHAT_MODEL_ID}...")
-chat_tokenizer = AutoTokenizer.from_pretrained(CHAT_MODEL_ID)
-chat_model = AutoModelForCausalLM.from_pretrained(
-    CHAT_MODEL_ID,
-    quantization_config=bnb_config,
-    device_map="auto"
-)
-chat_pipe = pipeline("text-generation", model=chat_model, tokenizer=chat_tokenizer)
-
-# 2. تحميل موديل الرؤية (Qwen VL 2B)
-print(f"جاري تحميل موديل الرؤية: {VISION_MODEL_ID}...")
-vision_model = AutoModelForCausalLM.from_pretrained(
-    VISION_MODEL_ID,
-    quantization_config=bnb_config,
-    device_map="auto"
-)
-vision_processor = AutoProcessor.from_pretrained(VISION_MODEL_ID)
+# إعدادات الحماية لضمان عدم حجب الصور المخصصة للمكفوفين (لأغراض المساعدة فقط)
+SAFETY_SETTINGS = [
+    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
+]
 
 @app.get("/")
 async def read_index(): return FileResponse("index.html")
@@ -68,56 +48,69 @@ async def get_logo():
 async def chat_completions(request: Request):
     body = await request.json()
     messages = body.get("messages", [])
-    system_prompt = "أنت 'دليل'، مساعد ذكي للمكفوفين، تتحدث باللهجة السعودية البيضاء العفوية. كن ودوداً جداً ومرحاً."
-    formatted_messages = [{"role": "system", "content": system_prompt}] + messages
-
-    # توليد الرد بسرعة
-    prompt = chat_tokenizer.apply_chat_template(formatted_messages, tokenize=False, add_generation_prompt=True)
-    outputs = chat_pipe(prompt, max_new_tokens=256, do_sample=True, temperature=0.7)
+    user_text = messages[-1]["content"] if messages else "مرحبا"
     
-    generated_text = outputs[0]["generated_text"].split("<|im_start|>assistant\n")[-1].replace("<|im_end|>", "").strip()
-    return {"choices": [{"message": {"role": "assistant", "content": generated_text}}]}
+    payload = {
+        "contents": [{"parts": [{"text": f"{SYSTEM_PROMPT}\n\nالمستخدم: {user_text}"}]}],
+        "generationConfig": {"maxOutputTokens": 512, "temperature": 0.7},
+        "safetySettings": SAFETY_SETTINGS
+    }
+
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(GEMINI_URL, json=payload, timeout=30.0)
+            res_data = response.json()
+            if "candidates" in res_data:
+                text = res_data["candidates"][0]["content"]["parts"][0]["text"]
+                return {"choices": [{"message": {"role": "assistant", "content": text}}]}
+            else:
+                print(f"DEBUG - Chat Error Response: {res_data}")
+                return JSONResponse({"choices": [{"message": {"content": "يا هلا بك، أخوك دليل معك بس فيه مشكلة بسيطة في الاتصال."}}]}, status_code=200)
+        except Exception as e:
+            return JSONResponse({"choices": [{"message": {"content": "معليش، السيرفر ما رد علي، جرب مرة ثانية."}}]}, status_code=200)
 
 @app.post("/v1/vision/analyze")
 async def vision_analyze(request: Request):
     body = await request.json()
     image_base64 = body.get("image")
-    prompt_text = body.get("prompt", "وصف لي الصورة باللهجة السعودية العفوية كأنك تشرح لمكفوف، ركز على التفاصيل المهمة.")
+    prompt_text = body.get("prompt", "وش تشوف في هالصورة؟ صفها للمكفوفين باختصار شديد باللهجة السعودية.")
 
     if not image_base64:
         raise HTTPException(status_code=400, detail="Image is required")
 
-    messages = [
-        {
-            "role": "user",
-            "content": [
-                {"type": "image", "image": f"data:image/jpeg;base64,{image_base64}"},
-                {"type": "text", "text": prompt_text},
-            ],
-        }
-    ]
+    payload = {
+        "contents": [{
+            "parts": [
+                {"text": f"{SYSTEM_PROMPT}\n\n{prompt_text}"},
+                {"inline_data": {"mime_type": "image/jpeg", "data": image_base64}}
+            ]
+        }],
+        "generationConfig": {"maxOutputTokens": 300, "temperature": 0.4},
+        "safetySettings": SAFETY_SETTINGS
+    }
 
-    text = vision_processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-    image_inputs, video_inputs = process_vision_info(messages)
-    inputs = vision_processor(
-        text=[text],
-        images=image_inputs,
-        videos=video_inputs,
-        padding=True,
-        return_tensors="pt",
-    ).to(vision_model.device)
-
-    # توليد الوصف بسرعة
-    generated_ids = vision_model.generate(**inputs, max_new_tokens=256)
-    generated_ids_trimmed = [
-        out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
-    ]
-    output_text = vision_processor.batch_decode(
-        generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
-    )[0]
-
-    return {"content": output_text}
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(GEMINI_URL, json=payload, timeout=60.0)
+            res_data = response.json()
+            if "candidates" in res_data:
+                output_text = res_data["candidates"][0]["content"]["parts"][0]["text"]
+                print(f"DEBUG - Gemini Vision: {output_text}")
+                return {"content": output_text}
+            else:
+                # طباعة الخطأ الحقيقي في التيرمينال للتشخيص
+                if "error" in res_data:
+                    print(f"!!! Gemini API Error: {res_data['error']['message']}")
+                elif "promptFeedback" in res_data:
+                    print(f"!!! Gemini Safety Block: {res_data['promptFeedback']}")
+                else:
+                    print(f"!!! Gemini Unknown Error: {res_data}")
+                
+                return {"content": "الكاميرا مغبشة شوي أو فيه مشكلة في الصورة، جرب مرة ثانية."}
+        except Exception as e:
+            print(f"Vision Connection Error: {e}")
+            return {"content": "معليش، ما قدرت أحلل الصورة حالياً."}
 
 if __name__ == "__main__":
-    print("--- تم تشغيل محرك 'دليل Turbo' المحلي! رشة عطر وجاهزين ---")
+    print("--- محرك 'دليل GuideMe' يعمل الآن بنظام Gemini (النسخة المطورة) ---")
     uvicorn.run(app, host="0.0.0.0", port=8888)
