@@ -33,6 +33,12 @@ SAFETY_SETTINGS = [
 @app.get("/")
 async def read_index(): return FileResponse("index.html")
 
+@app.get("/app.html")
+async def read_app(): return FileResponse("app.html")
+
+@app.get("/landing.css")
+async def get_landing_css(): return FileResponse("landing.css")
+
 @app.get("/styles.css")
 async def get_css(): return FileResponse("styles.css")
 
@@ -42,6 +48,11 @@ async def get_js(): return FileResponse("app.js")
 @app.get("/logo.png")
 async def get_logo():
     if os.path.exists("logo.png"): return FileResponse("logo.png")
+    return JSONResponse({"error": "not found"}, status_code=404)
+
+@app.get("/preview.png")
+async def get_preview():
+    if os.path.exists("preview.png"): return FileResponse("preview.png")
     return JSONResponse({"error": "not found"}, status_code=404)
 
 @app.post("/v1/chat/completions")

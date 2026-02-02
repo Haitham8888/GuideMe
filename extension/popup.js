@@ -78,14 +78,14 @@ class ExtensionPopup {
         // Open dashboard
         const openDashboard = document.getElementById('open-dashboard');
         openDashboard.addEventListener('click', () => {
-            chrome.tabs.create({ url: chrome.runtime.getURL('index.html') });
+            chrome.tabs.create({ url: chrome.runtime.getURL('app.html') });
         });
 
         // Help link
         const helpLink = document.getElementById('help-link');
         helpLink.addEventListener('click', (e) => {
             e.preventDefault();
-            chrome.tabs.create({ url: chrome.runtime.getURL('index.html#settings') });
+            chrome.tabs.create({ url: chrome.runtime.getURL('app.html') });
         });
     }
 
