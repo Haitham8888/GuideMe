@@ -45,6 +45,7 @@ class GuideMeChat {
         this.recordingDuration = document.getElementById('recording-duration');
         this.settingsModal = document.getElementById('settings-modal');
         this.settingsForm = document.getElementById('settings-form');
+        this.auditBtn = document.getElementById('audit-btn');
     }
 
     setupEventListeners() {
@@ -65,6 +66,10 @@ class GuideMeChat {
         this.liveBroadcastBtn.addEventListener('click', () => this.toggleLive());
         if (this.footerLiveBtn) {
             this.footerLiveBtn.addEventListener('click', () => this.toggleLive());
+        }
+
+        if (this.auditBtn) {
+            this.auditBtn.addEventListener('click', () => this.handleWebsiteAudit());
         }
 
         document.getElementById('settings-btn').addEventListener('click', () => {
@@ -138,6 +143,37 @@ class GuideMeChat {
             products.forEach(p => this.renderProductCard(p));
             this.speak('لقيت لك عرضين للايفون. في أمازون بـ 5499 وفي نون بـ 5350. وش تختار؟');
         }, 2000);
+    }
+
+    async handleWebsiteAudit() {
+        const url = prompt('من فضلك أدخل رابط الموقع الذي تريد فحصه:');
+        if (!url) return;
+
+        if (this.welcomeScreen) this.welcomeScreen.style.display = 'none';
+        this.addMessage('user', `افحص لي توافق هذا الموقع: ${url}`);
+
+        const thinkingId = Date.now();
+        this.addMessage('assistant', `جاري تحليل الموقع ${url} وفحص معايير الوصول عبر محركنا الذكي... لحظة فضلك`, null, thinkingId);
+
+        try {
+            const response = await fetch(`${this.settings.aiUrl}/v1/audit/website`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: url })
+            });
+            const data = await response.json();
+            this.removeMessage(thinkingId);
+
+            if (data.report) {
+                this.addMessage('assistant', data.report);
+            } else {
+                this.addMessage('assistant', 'معليش، ما قدرت أطلع تقرير حالياً، جرب مرة ثانية.');
+            }
+        } catch (e) {
+            console.error(e);
+            this.removeMessage(thinkingId);
+            this.addMessage('assistant', 'عذراً، فيه مشكلة في الاتصال بسيرفر الفحص.');
+        }
     }
 
     renderProductCard(p) {

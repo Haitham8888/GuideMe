@@ -5,6 +5,9 @@ import uvicorn
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
+from dotenv import load_dotenv
+
+load_dotenv() # شحن المتغيرات من ملف .env
 
 app = FastAPI()
 app.add_middleware(
@@ -15,7 +18,7 @@ app.add_middleware(
 )
 
 # --- إعدادات Google Gemini API ---
-GEMINI_API_KEY = "AIzaSyCbSc3NfM7MxMVdMVmk9IIkd02qyomi8qY"
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 # نستخدم v1beta للوصول لأحدث الميزات
 GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
 
@@ -121,6 +124,44 @@ async def vision_analyze(request: Request):
         except Exception as e:
             print(f"Vision Connection Error: {e}")
             return {"content": "معليش، ما قدرت أحلل الصورة حالياً."}
+            
+@app.post("/v1/audit/website")
+async def audit_website(request: Request):
+    body = await request.json()
+    url = body.get("url")
+    if not url:
+        raise HTTPException(status_code=400, detail="URL is required")
+
+    audit_prompt = f"""أنت خبير في معايير إمكانية الوصول (WCAG). قم بفحص وتخيل المعايير الأساسية لهذا الموقع {url} وقدم تقريراً لمستخدم مكفوف.
+اجب باللغة العربية وباللهجة السعودية الودودة.
+تحدث عن:
+1. الهيكل الدلالي (العناوين).
+2. التباين اللوني.
+3. التوافق مع قارئات الشاشة.
+4. التنقل عبر لوحة المفاتيح.
+في النهاية أعطِ نسبة مئوية تقديرية للتوافق."""
+
+    payload = {
+        "contents": [{"parts": [{"text": audit_prompt}]}],
+        "generationConfig": {"maxOutputTokens": 800, "temperature": 0.5},
+        "safetySettings": SAFETY_SETTINGS
+    }
+
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(GEMINI_URL, json=payload, timeout=60.0)
+            res_data = response.json()
+            if "candidates" in res_data:
+                report_text = res_data["candidates"][0]["content"]["parts"][0]["text"]
+                return {"report": report_text}
+            else:
+                print(f"DEBUG - Audit Error Response: {res_data}")
+                if "promptFeedback" in res_data:
+                    print(f"DEBUG - Safety Feedback: {res_data['promptFeedback']}")
+                return {"report": "معليش، ما قدرت أفحص الموقع حالياً، جرب مرة ثانية."}
+        except Exception as e:
+            print(f"Audit Connection Error: {e}")
+            return {"report": "عذراً، فيه مشكلة في الاتصال بسيرفر الفحص."}
 
 if __name__ == "__main__":
     print("--- محرك 'دليل GuideMe' يعمل الآن بنظام Gemini (النسخة المطورة) ---")
