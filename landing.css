@@ -167,6 +167,45 @@ nav {
     }
 }
 
+/* About Section (Vision & Mission) */
+.about-section {
+    padding: 6rem 10%;
+    background: var(--soft-bg);
+}
+
+.about-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+.about-card {
+    background: var(--white);
+    padding: 3rem;
+    border-radius: 30px;
+    box-shadow: var(--shadow-soft);
+    text-align: center;
+    transition: var(--transition);
+}
+
+.about-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(248, 164, 148, 0.15);
+}
+
+.about-card h2 {
+    color: var(--primary-coral);
+    margin-bottom: 1.5rem;
+    font-size: 2rem;
+}
+
+.about-card p {
+    font-size: 1.1rem;
+    color: var(--navy);
+    opacity: 0.9;
+    line-height: 1.8;
+}
+
 /* Features Section */
 .features {
     padding: 6rem 10%;
