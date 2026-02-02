@@ -198,7 +198,20 @@ body {
 }
 
 .logo-icon {
-    font-size: var(--font-size-3xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logo-icon img {
+    height: 32px;
+    width: auto;
+}
+
+.welcome-icon img {
+    max-width: 150px;
+    height: auto;
+    border-radius: var(--radius-lg);
 }
 
 .header-nav {
