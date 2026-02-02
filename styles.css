@@ -514,6 +514,17 @@ body {
     background: var(--bg-tertiary);
 }
 
+.camera-action-btn.live-btn.active {
+    background: var(--error-color);
+    animation: livePulse 2s infinite;
+}
+
+@keyframes livePulse {
+    0% { box-shadow: 0 0 0 0 rgba(229, 115, 115, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(229, 115, 115, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(229, 115, 115, 0); }
+}
+
 /* ===================================
    Input Area
    =================================== */

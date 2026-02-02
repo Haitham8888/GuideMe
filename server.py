@@ -1,13 +1,11 @@
-import torch
-from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration, BitsAndBytesConfig
+import os
+import base64
+import httpx
+import uvicorn
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
-import base64
-from io import BytesIO
-from PIL import Image
-import os
-import httpx
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse
 
 # إعداد التطبيق
 app = FastAPI()
@@ -18,41 +16,36 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- إعدادات OpenRouter للدردشة المجانية ---
-OPENROUTER_API_KEY = "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" # يمكنك تغييره لاحقاً
+# عرض الملفات الثابتة بشكل صريح لضمان عمل الـ CSS و الـ JS
+@app.get("/styles.css")
+async def get_css():
+    return FileResponse("styles.css")
+
+@app.get("/app.js")
+async def get_js():
+    return FileResponse("app.js")
+
+@app.get("/logo.png")
+async def get_logo():
+    return FileResponse("logo.png")
+
+@app.get("/")
+async def read_index():
+    return FileResponse("index.html")
+
+# --- إعدادات OpenRouter ---
+OPENROUTER_API_KEY = "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"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-# سنستخدم موديل Qwen 2.5 72B المجاني من OpenRouter للحصول على أفضل جودة عربية
-CHAT_MODEL_EXTERNAL = "qwen/qwen-2.5-72b-instruct:free" 
 
-# --- إعدادات الموديل المحلي للرؤية والبث ---
-VISION_MODEL_ID = "./models/Qwen2.5-VL-7B-Instruct"
-
-quantization_config = BitsAndBytesConfig(
-    load_in_4bit=True,
-    bnb_4bit_compute_dtype=torch.float16,
-    bnb_4bit_quant_type="nf4",
-    bnb_4bit_use_double_quant=True,
-)
-
-print("--- جاري تحميل موديل الرؤية (VL 7B) محلياً للبث المباشر ---")
-# تحميل موديل الرؤية فقط لتوفير الـ VRAM للبث
-vl_processor = AutoProcessor.from_pretrained(VISION_MODEL_ID)
-vl_model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
-    VISION_MODEL_ID,
-    quantization_config=quantization_config,
-    device_map="auto",
-    trust_remote_code=True
-)
+# الموديلات المستخدمة (مجانية وسريعة)
+CHAT_MODEL = "qwen/qwen-2.5-72b-instruct:free"
+VISION_MODEL = "google/gemini-2.0-flash-exp:free" 
 
 @app.post("/v1/chat/completions")
 async def chat_completions(request: Request):
-    """
-    هذا المسار يرسل الدردشة النصية إلى API خارجي مجاني لتوفير موارد الجهاز
-    """
     body = await request.json()
     messages = body.get("messages", [])
     
-    # إضافة لمسة سعودية
     system_instruction = {
         "role": "system", 
         "content": "أنت 'دليل'، مساعد ذكي يتحدث باللهجة السعودية البيضاء العفوية. تفاعل بمرح وأدب."
@@ -65,66 +58,76 @@ async def chat_completions(request: Request):
                 OPENROUTER_URL,
                 headers={
                     "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                    "HTTP-Referer": "http://localhost:6000", # اختياري
+                    "HTTP-Referer": "http://localhost:8888",
                     "X-Title": "GuideMe App",
                 },
                 json={
-                    "model": CHAT_MODEL_EXTERNAL,
+                    "model": CHAT_MODEL,
                     "messages": full_messages,
                 },
-                timeout=60.0
+                timeout=30.0
             )
-            
-            if response.status_code != 200:
-                print(f"OpenRouter Error: {response.text}")
-                return {"choices": [{"message": {"role": "assistant", "content": "عذراً يا غالي، يبدو فيه مشكلة في الاتصال بالسيرفر الخارجي. جرب مرة ثانية."}}]}
-            
-            return response.json()
+            return JSONResponse(content=response.json())
         except Exception as e:
-            print(f"API Error: {e}")
-            return {"choices": [{"message": {"role": "assistant", "content": "والله يا خوي الـ API الخارجي فيه مشكلة حالياً."}}]}
+            print(f"Chat Error: {e}")
+            return {"choices": [{"message": {"role": "assistant", "content": "عذراً، المتحدث الآلي متعطل حالياً."}}]}
 
 @app.post("/v1/vision/analyze")
 async def vision_analyze(request: Request):
     """
-    هذا المسار يستخدم الموديل المحلي للتحليل اللحظي للكاميرا (بث مباشر)
+    تحليل الصور باستخدام OpenRouter و Gemini Flash
     """
     body = await request.json()
     image_base64 = body.get("image")
-    prompt_text = body.get("prompt", "ماذا ترى في هذه الصورة؟ صفها بدقة لمكفوف باللغة العربية بأسلوب دليل (باللهجة السعودية).")
+    prompt_text = body.get("prompt", "ماذا ترى في هذه الصورة؟ صفها بدقة لمكفوف باللغة العربية بأسلوب دليل (باللهجة السعودية وعفوية).")
 
     if not image_base64:
         raise HTTPException(status_code=400, detail="Image is required")
 
-    try:
-        image_data = base64.b64decode(image_base64)
-        image = Image.open(BytesIO(image_data)).convert("RGB")
+    # تنسيق الرسائل لـ OpenRouter مع صورة
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": prompt_text},
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/jpeg;base64,{image_base64}"
+                    }
+                }
+            ]
+        }
+    ]
 
-        messages = [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "image", "image": image},
-                    {"type": "text", "text": prompt_text},
-                ],
-            }
-        ]
-
-        text = vl_processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-        inputs = vl_processor(text=[text], images=[image], padding=True, return_tensors="pt").to(vl_model.device)
-
-        with torch.no_grad():
-            generated_ids = vl_model.generate(**inputs, max_new_tokens=512)
-        
-        generated_ids_trimmed = [
-            out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
-        ]
-        response_text = vl_processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-
-        return {"content": response_text}
-    except Exception as e:
-        print(f"Local Vision Error: {e}")
-        return {"content": "واجهت مشكلة في قراءة الكاميرا محلياً."}
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(
+                OPENROUTER_URL,
+                headers={
+                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "HTTP-Referer": "http://localhost:8888",
+                    "X-Title": "GuideMe App",
+                },
+                json={
+                    "model": VISION_MODEL,
+                    "messages": messages,
+                },
+                timeout=60.0
+            )
+            
+            res_data = response.json()
+            if "choices" in res_data:
+                return {"content": res_data["choices"][0]["message"]["content"]}
+            else:
+                print(f"Vision Error Response: {res_data}")
+                return {"content": "ما قدرت أحلل الصورة حالياً، جرب مرة ثانية."}
+                
+        except Exception as e:
+            print(f"Vision API Error: {e}")
+            return {"content": "حدث خطأ في الاتصال بسيرفر الرؤية."}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=6000)
+    print("--- تشغيل سيرفر GuideMe الخفيف جداً (API Mode) على المنفذ 8888 ---")
+    print("--- الآن يشتغل فوراً وبدون استهلاك للـ GPU ---")
+    uvicorn.run(app, host="0.0.0.0", port=8888)

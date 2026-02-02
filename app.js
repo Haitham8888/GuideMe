@@ -14,6 +14,8 @@ class GuideMeChat {
         this.settings = this.loadSettings();
         this.synth = window.speechSynthesis;
         this.recognition = null;
+        this.isLiveMode = false;
+        this.liveInterval = null;
 
         this.init();
     }
@@ -44,6 +46,7 @@ class GuideMeChat {
         this.captureBtn = document.getElementById('capture-btn');
         this.toggleCameraBtn = document.getElementById('toggle-camera-btn');
         this.closeCameraBtn = document.getElementById('close-camera-btn');
+        this.liveBroadcastBtn = document.getElementById('live-broadcast-btn');
 
         // Recording indicator
         this.recordingIndicator = document.getElementById('recording-indicator');
@@ -102,6 +105,15 @@ class GuideMeChat {
         this.toggleCameraBtn.addEventListener('click', () => {
             this.speak('تبديل الكاميرا');
             this.switchCamera();
+        });
+        this.liveBroadcastBtn.addEventListener('click', () => {
+            if (this.isLiveMode) {
+                this.speak('إيقاف البث');
+                this.stopLiveBroadcast();
+            } else {
+                this.speak('بدأ البث المباشر');
+                this.startLiveBroadcast();
+            }
         });
 
         // Settings
@@ -495,6 +507,7 @@ class GuideMeChat {
         this.cameraBtn.setAttribute('aria-pressed', 'false');
 
         this.announce('تم إغلاق الكاميرا');
+        this.stopLiveBroadcast();
     }
 
     async switchCamera() {
@@ -580,6 +593,65 @@ class GuideMeChat {
         }
     }
 
+    async startLiveBroadcast() {
+        if (!this.cameraStream) return;
+        this.isLiveMode = true;
+        this.liveBroadcastBtn.classList.add('active');
+        this.liveBroadcastBtn.querySelector('.btn-text').textContent = 'إيقاف البث';
+
+        const runCycle = async () => {
+            if (!this.isLiveMode || !this.isCameraActive) return;
+
+            const canvas = this.cameraCanvas;
+            const video = this.cameraVideo;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            const imageUrl = canvas.toDataURL('image/jpeg', 0.6); // Quality 0.6 to reduce bandwidth
+            const base64Data = imageUrl.split(',')[1];
+
+            try {
+                const response = await fetch(`${this.settings.aiUrl}/v1/vision/analyze`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        image: base64Data,
+                        prompt: "صف ما تراه بعينك الآن باختصار شديد ومرح لمكفوف (باللهجة السعودية)."
+                    })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (this.isLiveMode) {
+                        this.addMessage('assistant', data.content); // Optional: if you want text log
+                        this.speak(data.content);
+                    }
+                }
+            } catch (e) {
+                console.error("Live Vision Error:", e);
+            }
+
+            // Next frame after 5 seconds
+            if (this.isLiveMode) {
+                this.liveInterval = setTimeout(runCycle, 5000);
+            }
+        };
+
+        runCycle();
+    }
+
+    stopLiveBroadcast() {
+        this.isLiveMode = false;
+        if (this.liveInterval) {
+            clearTimeout(this.liveInterval);
+            this.liveInterval = null;
+        }
+        if (this.liveBroadcastBtn) {
+            this.liveBroadcastBtn.classList.remove('active');
+            this.liveBroadcastBtn.querySelector('.btn-text').textContent = 'بث مباشر';
+        }
+    }
+
     // ===================================
     // Settings
     // ===================================
@@ -606,7 +678,7 @@ class GuideMeChat {
             darkMode: false,
             highContrast: false,
             reduceMotion: false,
-            aiUrl: 'http://localhost:6000'
+            aiUrl: 'http://localhost:8888'
         };
     }
 
@@ -618,7 +690,7 @@ class GuideMeChat {
             darkMode: document.getElementById('dark-mode').checked,
             highContrast: document.getElementById('high-contrast').checked,
             reduceMotion: document.getElementById('reduce-motion').checked,
-            aiUrl: document.getElementById('ai-url').value || 'http://localhost:6000'
+            aiUrl: document.getElementById('ai-url').value || 'http://localhost:8888'
         };
 
         localStorage.setItem('guideme-settings', JSON.stringify(this.settings));
@@ -661,7 +733,7 @@ class GuideMeChat {
             document.getElementById('dark-mode').checked = this.settings.darkMode;
             document.getElementById('high-contrast').checked = this.settings.highContrast;
             document.getElementById('reduce-motion').checked = this.settings.reduceMotion;
-            document.getElementById('ai-url').value = this.settings.aiUrl || 'http://localhost:6000';
+            document.getElementById('ai-url').value = this.settings.aiUrl || 'http://localhost:8888';
         }
     }
 
