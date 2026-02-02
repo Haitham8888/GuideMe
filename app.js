@@ -186,10 +186,29 @@ class GuideMeChat {
             this.recognition.interimResults = false;
 
             this.recognition.onresult = (event) => {
-                const transcript = event.results[0][0].transcript;
-                this.messageInput.value = transcript;
-                this.sendBtn.disabled = false;
-                this.announce(`تم التعرف على: ${transcript}`);
+                const transcript = event.results[0][0].transcript.toLowerCase();
+                this.announce(`سمعتك تقول: ${transcript}`);
+
+                // فحص إذا كان الكلام يحتوي على أمر "التصوير"
+                const captureCommands = ['وش تشوف', 'إيش قدامي', 'صور', 'شغل الكاميرا', 'ماذا ترى'];
+                const isCaptureCommand = captureCommands.some(cmd => transcript.includes(cmd));
+
+                if (isCaptureCommand) {
+                    this.speak('أبشر، قاعد أشوف لك الآن');
+                    // إذا الكاميرا مو شغالة، نشغلها أول
+                    if (!this.isCameraActive) {
+                        this.openCamera().then(() => {
+                            setTimeout(() => this.captureImage(), 1500); // ننتظر شوي لين تفتح الكاميرا
+                        });
+                    } else {
+                        this.captureImage();
+                    }
+                } else {
+                    // إذا كان مجرد كلام عادي، نحطه في الإدخال ونرسله
+                    this.messageInput.value = transcript;
+                    this.sendBtn.disabled = false;
+                    this.sendMessage();
+                }
             };
 
             this.recognition.onerror = (event) => {
@@ -586,6 +605,7 @@ class GuideMeChat {
 
             this.removeMessage(thinkingId);
             this.addMessage('assistant', result);
+            // حذفنا speak(result) من هنا لأن addMessage تنطق الرد تلقائياً
 
         } catch (error) {
             console.error('Vision Error:', error);
@@ -624,7 +644,7 @@ class GuideMeChat {
                     const data = await response.json();
                     if (this.isLiveMode) {
                         this.addMessage('assistant', data.content); // Optional: if you want text log
-                        this.speak(data.content);
+                        // حذفنا speak(data.content) من هنا لأن addMessage تنطق الرد تلقائياً
                     }
                 }
             } catch (e) {
@@ -777,17 +797,22 @@ class GuideMeChat {
     }
 
     speak(text) {
-        if (this.synth.speaking) {
-            this.synth.cancel();
-        }
+        if (!text) return;
+
+        // أزلنا this.synth.cancel() لكي يكمل المساعد كلامه ولا يقطعه
 
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'ar-SA';
-        utterance.rate = this.settings.voiceSpeed;
-        utterance.volume = this.settings.voiceVolume / 100;
+        utterance.rate = this.settings.voiceSpeed || 1;
+        utterance.volume = (this.settings.voiceVolume / 100) || 1;
 
+        // محاولة العثور على صوت عربي عالي الجودة
         const voices = this.synth.getVoices();
-        const arabicVoice = voices.find(voice => voice.lang.startsWith('ar'));
+        let arabicVoice = voices.find(voice => voice.lang === 'ar-SA' && voice.name.includes('Google'));
+        if (!arabicVoice) {
+            arabicVoice = voices.find(voice => voice.lang.startsWith('ar'));
+        }
+
         if (arabicVoice) {
             utterance.voice = arabicVoice;
         }
