@@ -5,28 +5,31 @@
 
 /* CSS Variables */
 :root {
-    /* Soft Comfortable Colors - Easy on the eyes */
-    --primary-blue: #7BA3D1;
-    --primary-blue-dark: #5E8ABF;
-    --primary-blue-light: #9BBDE0;
+    /* Colors from Logo - Sophisticated Coral and Navy Palette */
+    --primary-blue: #F8A494;
+    /* Coral from logo */
+    --primary-blue-dark: #E08B7B;
+    --primary-blue-light: #FBC9C1;
 
-    --secondary-blue: #A8C5E3;
-    --accent-blue: #6B92C0;
+    --secondary-blue: #BEC6D4;
+    /* Gray-Blue from logo */
+    --accent-blue: #2B2D42;
+    /* Deep Navy from logo text */
 
-    --bg-primary: #FAFBFC;
-    --bg-secondary: #F0F4F8;
-    --bg-tertiary: #E3EAF1;
+    --bg-primary: #FFFFFF;
+    --bg-secondary: #F8F9FA;
+    --bg-tertiary: #EEF1F5;
 
-    --text-primary: #3D4F5D;
-    --text-secondary: #6B7C8C;
-    --text-tertiary: #9BAAB8;
+    --text-primary: #2B2D42;
+    --text-secondary: #575A7B;
+    --text-tertiary: #8E91AF;
 
-    --border-color: #D8E2EC;
-    --border-light: #E8EFF5;
+    --border-color: #E2E8F0;
+    --border-light: #EDF2F7;
 
-    --success-color: #6DB88A;
-    --warning-color: #E5B565;
-    --error-color: #D98080;
+    --success-color: #5DB18E;
+    --warning-color: #F8B459;
+    --error-color: #E57373;
 
     /* Typography - Optimized for Arabic */
     --font-family: 'Tajawal', 'Cairo', 'Amiri', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -70,20 +73,21 @@
 
 /* Dark Mode */
 [data-theme="dark"] {
-    --bg-primary: #1E293B;
-    --bg-secondary: #0F172A;
-    --bg-tertiary: #334155;
+    --bg-primary: #1A1C2E;
+    /* Deep navy base */
+    --bg-secondary: #111222;
+    --bg-tertiary: #2B2D42;
 
     --text-primary: #F1F5F9;
     --text-secondary: #CBD5E1;
     --text-tertiary: #94A3B8;
 
-    --border-color: #334155;
-    --border-light: #1E293B;
+    --border-color: #2B2D42;
+    --border-light: #1A1C3E;
 
-    --primary-blue: #60A5FA;
-    --primary-blue-dark: #3B82F6;
-    --secondary-blue: #93C5FD;
+    --primary-blue: #F8A494;
+    --primary-blue-dark: #E08B7B;
+    --secondary-blue: #BEC6D4;
 }
 
 /* ===================================
