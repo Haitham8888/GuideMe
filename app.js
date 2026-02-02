@@ -1,5 +1,5 @@
 // ===================================
-// GuideMe - Chat Interface Application
+// GuideMe - Application Logic
 // ===================================
 
 class GuideMeChat {
@@ -7,10 +7,7 @@ class GuideMeChat {
         this.messages = [];
         this.isRecording = false;
         this.isCameraActive = false;
-        this.mediaRecorder = null;
         this.cameraStream = null;
-        this.recordingStartTime = null;
-        this.recordingInterval = null;
         this.settings = this.loadSettings();
         this.synth = window.speechSynthesis;
         this.recognition = null;
@@ -25,51 +22,32 @@ class GuideMeChat {
         this.setupEventListeners();
         this.setupVoiceRecognition();
         this.applySettings();
-        this.announce('مرحباً بك في GuideMe. يمكنك الكتابة أو استخدام المايك أو الكاميرا');
+        this.announce('مرحباً بك في GuideMe.');
+
+        // ربط الكائن بالنافذة ليسهل استدعاء الوظائف من HTML
+        window.guideMe = this;
     }
 
     setupElements() {
-        // Input elements
         this.messageInput = document.getElementById('message-input');
         this.sendBtn = document.getElementById('send-btn');
         this.micBtn = document.getElementById('mic-btn');
         this.cameraBtn = document.getElementById('camera-btn');
-
-        // Chat elements
         this.messagesArea = document.getElementById('messages-area');
         this.welcomeScreen = document.getElementById('welcome-screen');
-
-        // Camera elements
         this.cameraPreview = document.getElementById('camera-preview');
         this.cameraVideo = document.getElementById('camera-video');
         this.cameraCanvas = document.getElementById('camera-canvas');
         this.captureBtn = document.getElementById('capture-btn');
-        this.toggleCameraBtn = document.getElementById('toggle-camera-btn');
-        this.closeCameraBtn = document.getElementById('close-camera-btn');
         this.liveBroadcastBtn = document.getElementById('live-broadcast-btn');
-
-        // Recording indicator
         this.recordingIndicator = document.getElementById('recording-indicator');
         this.recordingDuration = document.getElementById('recording-duration');
-
-        // Settings
-        this.settingsBtn = document.getElementById('settings-btn');
         this.settingsModal = document.getElementById('settings-modal');
-        this.closeSettingsBtn = document.getElementById('close-settings-btn');
-        this.cancelSettingsBtn = document.getElementById('cancel-settings-btn');
         this.settingsForm = document.getElementById('settings-form');
-        this.modalOverlay = document.getElementById('modal-overlay');
-
-        // New chat button
-        this.newChatBtn = document.getElementById('new-chat-btn');
     }
 
     setupEventListeners() {
-        // Send message
-        this.sendBtn.addEventListener('click', () => {
-            this.speak('إرسال');
-            this.sendMessage();
-        });
+        this.sendBtn.addEventListener('click', () => this.sendMessage());
         this.messageInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -77,102 +55,28 @@ class GuideMeChat {
             }
         });
 
-        // Enable/disable send button based on input
-        this.messageInput.addEventListener('input', () => {
-            this.sendBtn.disabled = !this.messageInput.value.trim();
-            this.autoResizeTextarea();
-        });
+        this.micBtn.addEventListener('click', () => this.toggleRecording());
+        this.cameraBtn.addEventListener('click', () => this.toggleCamera());
 
-        // Microphone
-        this.micBtn.addEventListener('click', () => {
-            if (!this.isRecording) this.speak('اسمعني');
-            this.toggleRecording();
-        });
+        document.getElementById('close-camera-btn').addEventListener('click', () => this.closeCamera());
+        this.captureBtn.addEventListener('click', () => this.captureImage());
 
-        // Camera
-        this.cameraBtn.addEventListener('click', () => {
-            if (!this.isCameraActive) this.speak('شوف بدالي');
-            this.toggleCamera();
-        });
-        this.closeCameraBtn.addEventListener('click', () => {
-            this.speak('إغلاق الكاميرا');
-            this.closeCamera();
-        });
-        this.captureBtn.addEventListener('click', () => {
-            this.speak('صور بدالي');
-            this.captureImage();
-        });
-        this.toggleCameraBtn.addEventListener('click', () => {
-            this.speak('تبديل الكاميرا');
-            this.switchCamera();
-        });
         this.liveBroadcastBtn.addEventListener('click', () => {
-            if (this.isLiveMode) {
-                this.speak('إيقاف البث');
-                this.stopLiveBroadcast();
-            } else {
-                this.speak('بدأ البث المباشر');
-                this.startLiveBroadcast();
-            }
+            if (this.isLiveMode) this.stopLiveBroadcast();
+            else this.startLiveBroadcast();
         });
 
-        // Settings
-        this.settingsBtn.addEventListener('click', () => {
-            this.speak('الإعدادات');
-            this.openSettings();
+        document.getElementById('settings-btn').addEventListener('click', () => {
+            this.settingsModal.hidden = false;
         });
-        this.closeSettingsBtn.addEventListener('click', () => {
-            this.speak('إغلاق الإعدادات');
-            this.closeSettings();
+
+        document.getElementById('close-settings-btn').addEventListener('click', () => {
+            this.settingsModal.hidden = true;
         });
-        this.cancelSettingsBtn.addEventListener('click', () => {
-            this.speak('إلغاء');
-            this.closeSettings();
-        });
-        this.modalOverlay.addEventListener('click', () => {
-            this.speak('إغلاق الإعدادات');
-            this.closeSettings();
-        });
+
         this.settingsForm.addEventListener('submit', (e) => {
             e.preventDefault();
             this.saveSettings();
-        });
-
-        // Settings controls
-        this.setupSettingsControls();
-
-        // New chat
-        this.newChatBtn.addEventListener('click', () => {
-            this.speak('محادثة جديدة');
-            this.startNewChat();
-        });
-
-        // Escape key to close modals
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                if (!this.settingsModal.hidden) {
-                    this.closeSettings();
-                }
-                if (this.isCameraActive) {
-                    this.closeCamera();
-                }
-            }
-        });
-    }
-
-    setupSettingsControls() {
-        // Voice speed
-        const voiceSpeed = document.getElementById('voice-speed');
-        const voiceSpeedOutput = document.getElementById('voice-speed-output');
-        voiceSpeed.addEventListener('input', (e) => {
-            voiceSpeedOutput.textContent = `${e.target.value}x`;
-        });
-
-        // Voice volume
-        const voiceVolume = document.getElementById('voice-volume');
-        const voiceVolumeOutput = document.getElementById('voice-volume-output');
-        voiceVolume.addEventListener('input', (e) => {
-            voiceVolumeOutput.textContent = `${e.target.value}%`;
         });
     }
 
@@ -180,659 +84,219 @@ class GuideMeChat {
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             this.recognition = new SpeechRecognition();
-
             this.recognition.lang = 'ar-SA';
-            this.recognition.continuous = false;
-            this.recognition.interimResults = false;
-
             this.recognition.onresult = (event) => {
                 const transcript = event.results[0][0].transcript.toLowerCase();
-                this.announce(`سمعتك تقول: ${transcript}`);
+                this.messageInput.value = transcript;
 
-                // فحص إذا كان الكلام يحتوي على أمر "التصوير"
-                const captureCommands = ['وش تشوف', 'إيش قدامي', 'صور', 'شغل الكاميرا', 'ماذا ترى'];
-                const isCaptureCommand = captureCommands.some(cmd => transcript.includes(cmd));
-
-                if (isCaptureCommand) {
+                // فحص الأوامر الذكية
+                if (transcript.includes('وش تشوف') || transcript.includes('صور')) {
                     this.speak('أبشر، قاعد أشوف لك الآن');
-                    // إذا الكاميرا مو شغالة، نشغلها أول
                     if (!this.isCameraActive) {
-                        this.openCamera().then(() => {
-                            setTimeout(() => this.captureImage(), 1500); // ننتظر شوي لين تفتح الكاميرا
-                        });
+                        this.openCamera().then(() => setTimeout(() => this.captureImage(), 1000));
                     } else {
                         this.captureImage();
                     }
                 } else {
-                    // إذا كان مجرد كلام عادي، نحطه في الإدخال ونرسله
-                    this.messageInput.value = transcript;
-                    this.sendBtn.disabled = false;
                     this.sendMessage();
                 }
             };
-
-            this.recognition.onerror = (event) => {
-                console.error('Speech recognition error:', event.error);
-                this.announce('عذراً، لم أتمكن من فهم الصوت. حاول مرة أخرى');
-                this.stopRecording();
-            };
-
-            this.recognition.onend = () => {
-                this.stopRecording();
-            };
+            this.recognition.onend = () => this.stopRecording();
         }
     }
 
-    // ===================================
-    // Message Handling
-    // ===================================
-
-    sendMessage() {
+    async sendMessage() {
         const text = this.messageInput.value.trim();
         if (!text) return;
 
-        // Hide welcome screen
-        if (this.welcomeScreen) {
-            this.welcomeScreen.style.display = 'none';
-        }
-
-        // Add user message
+        if (this.welcomeScreen) this.welcomeScreen.style.display = 'none';
         this.addMessage('user', text);
-
-        // Clear input
         this.messageInput.value = '';
-        this.sendBtn.disabled = true;
-        this.autoResizeTextarea();
 
-        // Simulate assistant response
-        this.generateResponse(text);
-    }
-
-    addMessage(role, content, imageUrl = null, id = null) {
-        const message = {
-            role,
-            content,
-            imageUrl,
-            id: id || Date.now(),
-            timestamp: new Date()
-        };
-
-        this.messages.push(message);
-        this.renderMessage(message);
-        this.scrollToBottom();
-
-        // Announce for screen readers
-        if (role === 'assistant' && content !== 'جاري التفكير...') {
-            this.speak(content);
-        }
-    }
-
-    removeMessage(id) {
-        const index = this.messages.findIndex(m => m.id === id);
-        if (index !== -1) {
-            this.messages.splice(index, 1);
-            // Refresh messages area
-            this.messagesArea.innerHTML = '';
-            this.messages.forEach(m => this.renderMessage(m));
-        }
-    }
-
-    renderMessage(message) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${message.role}`;
-        messageDiv.setAttribute('role', 'article');
-        messageDiv.setAttribute('aria-label', `رسالة من ${message.role === 'user' ? 'المستخدم' : 'المساعد'}`);
-
-        const avatar = document.createElement('div');
-        avatar.className = 'message-avatar';
-        avatar.setAttribute('aria-hidden', 'true');
-
-        // Create SVG icon for avatar
-        const svgNS = 'http://www.w3.org/2000/svg';
-        const svg = document.createElementNS(svgNS, 'svg');
-        svg.setAttribute('width', '20');
-        svg.setAttribute('height', '20');
-        svg.setAttribute('viewBox', '0 0 24 24');
-        svg.setAttribute('fill', 'none');
-
-        if (message.role === 'user') {
-            // User icon
-            const circle = document.createElementNS(svgNS, 'circle');
-            circle.setAttribute('cx', '12');
-            circle.setAttribute('cy', '8');
-            circle.setAttribute('r', '4');
-            circle.setAttribute('stroke', 'currentColor');
-            circle.setAttribute('stroke-width', '2');
-
-            const path = document.createElementNS(svgNS, 'path');
-            path.setAttribute('d', 'M4 20C4 16.6863 6.68629 14 10 14H14C17.3137 14 20 16.6863 20 20');
-            path.setAttribute('stroke', 'currentColor');
-            path.setAttribute('stroke-width', '2');
-            path.setAttribute('stroke-linecap', 'round');
-
-            svg.appendChild(circle);
-            svg.appendChild(path);
+        // وضع التسوق التجريبي
+        if (text.includes('ايفون') || text.includes('أيفون') || text.includes('تسوق')) {
+            this.handleShoppingMode(text);
         } else {
-            // Assistant icon (robot)
-            const rect1 = document.createElementNS(svgNS, 'rect');
-            rect1.setAttribute('x', '6');
-            rect1.setAttribute('y', '8');
-            rect1.setAttribute('width', '12');
-            rect1.setAttribute('height', '12');
-            rect1.setAttribute('rx', '2');
-            rect1.setAttribute('stroke', 'currentColor');
-            rect1.setAttribute('stroke-width', '2');
-
-            const circle1 = document.createElementNS(svgNS, 'circle');
-            circle1.setAttribute('cx', '10');
-            circle1.setAttribute('cy', '13');
-            circle1.setAttribute('r', '1');
-            circle1.setAttribute('fill', 'currentColor');
-
-            const circle2 = document.createElementNS(svgNS, 'circle');
-            circle2.setAttribute('cx', '14');
-            circle2.setAttribute('cy', '13');
-            circle2.setAttribute('r', '1');
-            circle2.setAttribute('fill', 'currentColor');
-
-            const path = document.createElementNS(svgNS, 'path');
-            path.setAttribute('d', 'M12 8V5M12 5L10 7M12 5L14 7');
-            path.setAttribute('stroke', 'currentColor');
-            path.setAttribute('stroke-width', '2');
-            path.setAttribute('stroke-linecap', 'round');
-            path.setAttribute('stroke-linejoin', 'round');
-
-            svg.appendChild(rect1);
-            svg.appendChild(circle1);
-            svg.appendChild(circle2);
-            svg.appendChild(path);
+            this.generateResponse(text);
         }
-
-        avatar.appendChild(svg);
-
-        const contentDiv = document.createElement('div');
-        contentDiv.className = 'message-content';
-
-        const textDiv = document.createElement('div');
-        textDiv.className = 'message-text';
-        textDiv.textContent = message.content;
-
-        contentDiv.appendChild(textDiv);
-
-        if (message.imageUrl) {
-            const img = document.createElement('img');
-            img.src = message.imageUrl;
-            img.className = 'message-image';
-            img.alt = 'صورة مرفقة مع الرسالة';
-            contentDiv.appendChild(img);
-        }
-
-        const timeDiv = document.createElement('div');
-        timeDiv.className = 'message-time';
-        timeDiv.textContent = this.formatTime(message.timestamp);
-        contentDiv.appendChild(timeDiv);
-
-        messageDiv.appendChild(avatar);
-        messageDiv.appendChild(contentDiv);
-
-        this.messagesArea.appendChild(messageDiv);
     }
 
-    async generateResponse(userMessage) {
-        try {
-            // Add a thinking message
-            const thinkingId = Date.now();
-            this.addMessage('assistant', 'جاري التفكير...', null, thinkingId);
+    handleShoppingMode(query) {
+        const thinkingId = Date.now();
+        this.addMessage('assistant', 'أبشر، قاعد أبحث لك في أمازون ونون وأقارن الأسعار... لحظة بس', null, thinkingId);
 
+        setTimeout(() => {
+            this.removeMessage(thinkingId);
+            this.addMessage('assistant', 'لقيت لك هالعروض الممتازة للايفون 17 برو ماكس:');
+
+            const products = [
+                { name: 'iPhone 17 Pro Max - Amazon', price: '5,499 ريال', specs: '512GB, Titanium', img: 'https://m.media-amazon.com/images/I/61mNn9-mGAL._AC_SL1500_.jpg' },
+                { name: 'iPhone 17 Pro Max - Noon', price: '5,350 ريال', specs: '256GB, Silver', img: 'https://m.media-amazon.com/images/I/61N9fD5N9fL._AC_SL1500_.jpg' }
+            ];
+
+            products.forEach(p => this.renderProductCard(p));
+            this.speak('لقيت لك عرضين للايفون. في أمازون بـ 5499 وفي نون بـ 5350. وش تختار؟');
+        }, 2000);
+    }
+
+    renderProductCard(p) {
+        const div = document.createElement('div');
+        div.className = 'product-card';
+        div.innerHTML = `
+            <img src="${p.img}" class="product-image">
+            <div class="product-info">
+                <h3>${p.name}</h3>
+                <p>${p.specs}</p>
+                <div class="product-price">${p.price}</div>
+                <button class="buy-btn" onclick="guideMe.handlePurchase('${p.name}', '${p.price}')">اختيار وشراء</button>
+            </div>
+        `;
+        this.messagesArea.appendChild(div);
+        this.scrollToBottom();
+    }
+
+    handlePurchase(name, price) {
+        this.speak(`تم اختيار ${name}. جاري تأكيد الدفع.`);
+        this.addMessage('assistant', `جاري معالجة الدفع لـ ${name}...`);
+        setTimeout(() => {
+            const success = document.createElement('div');
+            success.className = 'payment-success';
+            success.innerHTML = `✅ تم الشراء بنجاح! بيوصلك بكرة بإذن الله.`;
+            this.messagesArea.appendChild(success);
+            this.scrollToBottom();
+            this.speak('ألف مبروك! تمت عملية الشراء بنجاح.');
+        }, 2000);
+    }
+
+    async generateResponse(text) {
+        const thinkingId = Date.now();
+        this.addMessage('assistant', 'جاري التفكير...', null, thinkingId);
+        try {
             const response = await fetch(`${this.settings.aiUrl}/v1/chat/completions`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    messages: this.messages.slice(-5).map(m => ({
-                        role: m.role,
-                        content: m.content
-                    }))
-                })
+                body: JSON.stringify({ messages: [{ role: 'user', content: text }] })
             });
-
-            if (!response.ok) throw new Error('سيرفر الدردشة لا يستجيب');
-
             const data = await response.json();
-            const reply = data.choices[0].message.content;
-
-            // Remove thinking message and add real reply
             this.removeMessage(thinkingId);
-            this.addMessage('assistant', reply);
 
-        } catch (error) {
-            console.error('Chat Error:', error);
-            this.announce('حدث خطأ في الاتصال بالسيرفر');
-        }
-    }
-
-    // ===================================
-    // Voice Recording
-    // ===================================
-
-    async toggleRecording() {
-        if (this.isRecording) {
-            this.stopRecording();
-        } else {
-            await this.startRecording();
-        }
-    }
-
-    async startRecording() {
-        if (!this.recognition) {
-            this.announce('عذراً، متصفحك لا يدعم التعرف على الصوت');
-            return;
-        }
-
-        try {
-            this.isRecording = true;
-            this.micBtn.setAttribute('aria-pressed', 'true');
-            this.recordingIndicator.hidden = false;
-
-            this.recordingStartTime = Date.now();
-            this.updateRecordingDuration();
-            this.recordingInterval = setInterval(() => {
-                this.updateRecordingDuration();
-            }, 1000);
-
-            this.recognition.start();
-            this.announce('بدأ التسجيل');
-        } catch (error) {
-            console.error('Error starting recording:', error);
-            this.announce('حدث خطأ أثناء بدء التسجيل');
-            this.stopRecording();
-        }
-    }
-
-    stopRecording() {
-        if (!this.isRecording) return;
-
-        this.isRecording = false;
-        this.micBtn.setAttribute('aria-pressed', 'false');
-        this.recordingIndicator.hidden = true;
-
-        if (this.recordingInterval) {
-            clearInterval(this.recordingInterval);
-            this.recordingInterval = null;
-        }
-
-        if (this.recognition) {
-            try {
-                this.recognition.stop();
-            } catch (error) {
-                console.error('Error stopping recognition:', error);
+            if (data.choices && data.choices[0] && data.choices[0].message) {
+                this.addMessage('assistant', data.choices[0].message.content);
+            } else {
+                this.addMessage('assistant', 'معليش، فيه مشكلة في الرد من السيرفر، جرب مرة ثانية.');
             }
+        } catch (e) {
+            console.error(e);
+            this.removeMessage(thinkingId);
+            this.addMessage('assistant', 'عذراً، السيرفر ما يرد.');
         }
     }
 
-    updateRecordingDuration() {
-        if (!this.recordingStartTime) return;
-
-        const elapsed = Math.floor((Date.now() - this.recordingStartTime) / 1000);
-        const minutes = Math.floor(elapsed / 60);
-        const seconds = elapsed % 60;
-        this.recordingDuration.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    addMessage(role, content, imageUrl = null, id = null) {
+        const msg = { role, content, imageUrl, id: id || Date.now(), timestamp: new Date() };
+        this.messages.push(msg);
+        this.renderMessage(msg);
+        if (role === 'assistant' && content !== 'جاري التفكير...') this.speak(content);
     }
 
-    // ===================================
-    // Camera Functions
-    // ===================================
+    renderMessage(msg) {
+        const div = document.createElement('div');
+        div.className = `message ${msg.role}`;
+        div.innerHTML = `<div class="message-content"><div class="message-text">${msg.content}</div></div>`;
+        if (msg.imageUrl) {
+            const img = document.createElement('img');
+            img.src = msg.imageUrl;
+            img.className = 'message-image';
+            div.querySelector('.message-content').appendChild(img);
+        }
+        this.messagesArea.appendChild(div);
+        this.scrollToBottom();
+    }
+
+    removeMessage(id) {
+        this.messages = this.messages.filter(m => m.id !== id);
+        this.messagesArea.innerHTML = '';
+        this.messages.forEach(m => this.renderMessage(m));
+    }
 
     async toggleCamera() {
-        if (this.isCameraActive) {
-            this.closeCamera();
-        } else {
-            await this.openCamera();
-        }
+        if (this.isCameraActive) this.closeCamera();
+        else await this.openCamera();
     }
 
     async openCamera() {
         try {
-            this.cameraStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'user' },
-                audio: false
-            });
-
+            this.cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
             this.cameraVideo.srcObject = this.cameraStream;
             this.cameraPreview.hidden = false;
             this.isCameraActive = true;
-            this.cameraBtn.setAttribute('aria-pressed', 'true');
-
-            // Hide welcome screen
-            if (this.welcomeScreen) {
-                this.welcomeScreen.style.display = 'none';
-            }
-
-            this.announce('تم فتح الكاميرا');
-        } catch (error) {
-            console.error('Error accessing camera:', error);
-            this.announce('عذراً، لا يمكن الوصول إلى الكاميرا');
-        }
+        } catch (e) { this.announce('خطأ في الكاميرا'); }
     }
 
     closeCamera() {
-        if (this.cameraStream) {
-            this.cameraStream.getTracks().forEach(track => track.stop());
-            this.cameraStream = null;
-        }
-
-        this.cameraVideo.srcObject = null;
+        if (this.cameraStream) this.cameraStream.getTracks().forEach(t => t.stop());
         this.cameraPreview.hidden = true;
         this.isCameraActive = false;
-        this.cameraBtn.setAttribute('aria-pressed', 'false');
-
-        this.announce('تم إغلاق الكاميرا');
-        this.stopLiveBroadcast();
-    }
-
-    async switchCamera() {
-        if (!this.cameraStream) return;
-
-        const currentFacingMode = this.cameraStream.getVideoTracks()[0].getSettings().facingMode;
-        const newFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
-
-        this.closeCamera();
-
-        try {
-            this.cameraStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: newFacingMode },
-                audio: false
-            });
-
-            this.cameraVideo.srcObject = this.cameraStream;
-            this.announce('تم تبديل الكاميرا');
-        } catch (error) {
-            console.error('Error switching camera:', error);
-            this.announce('عذراً، لا يمكن تبديل الكاميرا');
-        }
     }
 
     captureImage() {
-        if (!this.cameraStream) return;
-
-        const video = this.cameraVideo;
-        const canvas = this.cameraCanvas;
-
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0);
-
-        const imageUrl = canvas.toDataURL('image/jpeg');
-
-        // Add message with image
-        this.addMessage('user', 'صورة ملتقطة من الكاميرا', imageUrl);
-
-        // Close camera
+        const ctx = this.cameraCanvas.getContext('2d');
+        this.cameraCanvas.width = this.cameraVideo.videoWidth;
+        this.cameraCanvas.height = this.cameraVideo.videoHeight;
+        ctx.drawImage(this.cameraVideo, 0, 0);
+        const url = this.cameraCanvas.toDataURL('image/jpeg');
+        this.addMessage('user', 'صورة ملتقطة', url);
         this.closeCamera();
-
-        this.announce('تم التقاط الصورة وإرسالها');
-
-        // Simulate response while thinking
-        const thinkingMsg = "جاري تحليل الصورة... لحظة واحدة";
-        this.addMessage('assistant', thinkingMsg);
-        this.speak(thinkingMsg);
-
-        // Send for vision analysis
-        this.analyzeWithVisionServer(imageUrl);
+        this.analyzeVision(url);
     }
 
-    async analyzeWithVisionServer(imageUrl) {
+    async analyzeVision(url) {
+        const tid = Date.now();
+        this.addMessage('assistant', 'أحلل الصورة...', null, tid);
         try {
-            const thinkingId = Date.now();
-            this.addMessage('assistant', 'جاري تحليل الصورة بعيون دليل...', null, thinkingId);
-
-            const base64Data = imageUrl.split(',')[1];
-
-            const response = await fetch(`${this.settings.aiUrl}/v1/vision/analyze`, {
+            const res = await fetch(`${this.settings.aiUrl}/v1/vision/analyze`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    image: base64Data,
-                    prompt: "ماذا ترى في هذه الصورة؟ صفها بدقة لمكفوف باللغة العربية بأسلوب دليل (باللهجة السعودية)."
-                })
+                body: JSON.stringify({ image: url.split(',')[1] })
             });
-
-            if (!response.ok) throw new Error('سيرفر الرؤية لا يستجيب');
-
-            const data = await response.json();
-            const result = data.content;
-
-            this.removeMessage(thinkingId);
-            this.addMessage('assistant', result);
-            // حذفنا speak(result) من هنا لأن addMessage تنطق الرد تلقائياً
-
-        } catch (error) {
-            console.error('Vision Error:', error);
-            this.addMessage('assistant', "عذراً، ما قدرت أحلل الصورة. تأكد إن السيرفر شغال.");
-        }
+            const data = await res.json();
+            this.removeMessage(tid);
+            this.addMessage('assistant', data.content);
+        } catch (e) { this.removeMessage(tid); this.addMessage('assistant', 'خطأ في التحليل'); }
     }
 
-    async startLiveBroadcast() {
-        if (!this.cameraStream) return;
-        this.isLiveMode = true;
-        this.liveBroadcastBtn.classList.add('active');
-        this.liveBroadcastBtn.querySelector('.btn-text').textContent = 'إيقاف البث';
-
-        const runCycle = async () => {
-            if (!this.isLiveMode || !this.isCameraActive) return;
-
-            const canvas = this.cameraCanvas;
-            const video = this.cameraVideo;
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0);
-            const imageUrl = canvas.toDataURL('image/jpeg', 0.6); // Quality 0.6 to reduce bandwidth
-            const base64Data = imageUrl.split(',')[1];
-
-            try {
-                const response = await fetch(`${this.settings.aiUrl}/v1/vision/analyze`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        image: base64Data,
-                        prompt: "صف ما تراه بعينك الآن باختصار شديد ومرح لمكفوف (باللهجة السعودية)."
-                    })
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    if (this.isLiveMode) {
-                        this.addMessage('assistant', data.content); // Optional: if you want text log
-                        // حذفنا speak(data.content) من هنا لأن addMessage تنطق الرد تلقائياً
-                    }
-                }
-            } catch (e) {
-                console.error("Live Vision Error:", e);
-            }
-
-            // Next frame after 5 seconds
-            if (this.isLiveMode) {
-                this.liveInterval = setTimeout(runCycle, 5000);
-            }
-        };
-
-        runCycle();
-    }
-
-    stopLiveBroadcast() {
-        this.isLiveMode = false;
-        if (this.liveInterval) {
-            clearTimeout(this.liveInterval);
-            this.liveInterval = null;
-        }
-        if (this.liveBroadcastBtn) {
-            this.liveBroadcastBtn.classList.remove('active');
-            this.liveBroadcastBtn.querySelector('.btn-text').textContent = 'بث مباشر';
-        }
-    }
-
-    // ===================================
-    // Settings
-    // ===================================
-
-    openSettings() {
-        this.settingsModal.hidden = false;
-        this.settingsModal.setAttribute('aria-hidden', 'false');
-        document.getElementById('voice-speed').focus();
-        this.announce('فتح نافذة الإعدادات');
-    }
-
-    closeSettings() {
-        this.settingsModal.hidden = true;
-        this.settingsModal.setAttribute('aria-hidden', 'true');
-        this.announce('إغلاق نافذة الإعدادات');
-    }
-
-    loadSettings() {
-        const saved = localStorage.getItem('guideme-settings');
-        return saved ? JSON.parse(saved) : {
-            voiceSpeed: 1,
-            voiceVolume: 80,
-            fontSize: 'medium',
-            darkMode: false,
-            highContrast: false,
-            reduceMotion: false,
-            aiUrl: 'http://localhost:8888'
-        };
-    }
-
-    saveSettings() {
-        this.settings = {
-            voiceSpeed: parseFloat(document.getElementById('voice-speed').value),
-            voiceVolume: parseInt(document.getElementById('voice-volume').value),
-            fontSize: document.getElementById('font-size').value,
-            darkMode: document.getElementById('dark-mode').checked,
-            highContrast: document.getElementById('high-contrast').checked,
-            reduceMotion: document.getElementById('reduce-motion').checked,
-            aiUrl: document.getElementById('ai-url').value || 'http://localhost:8888'
-        };
-
-        localStorage.setItem('guideme-settings', JSON.stringify(this.settings));
-        this.speak('تم حفظ الإعدادات');
-        this.applySettings();
-        this.closeSettings();
-        this.announce('تم حفظ الإعدادات بنجاح');
-    }
-
-    applySettings() {
-        // Apply font size
-        const fontSizeMap = {
-            'small': '14px',
-            'medium': '16px',
-            'large': '18px',
-            'xlarge': '20px'
-        };
-        document.documentElement.style.fontSize = fontSizeMap[this.settings.fontSize] || '16px';
-
-        // Apply dark mode
-        document.documentElement.setAttribute('data-theme', this.settings.darkMode ? 'dark' : 'light');
-
-        // Apply high contrast
-        document.body.setAttribute('data-high-contrast', this.settings.highContrast);
-
-        // Apply reduced motion
-        if (this.settings.reduceMotion) {
-            document.body.style.setProperty('--transition', '0ms');
+    toggleRecording() {
+        if (this.isRecording) {
+            this.recognition.stop();
+            this.isRecording = false;
         } else {
-            document.body.style.removeProperty('--transition');
-        }
-
-        // Update form values
-        if (document.getElementById('voice-speed')) {
-            document.getElementById('voice-speed').value = this.settings.voiceSpeed;
-            document.getElementById('voice-speed-output').textContent = `${this.settings.voiceSpeed}x`;
-            document.getElementById('voice-volume').value = this.settings.voiceVolume;
-            document.getElementById('voice-volume-output').textContent = `${this.settings.voiceVolume}%`;
-            document.getElementById('font-size').value = this.settings.fontSize;
-            document.getElementById('dark-mode').checked = this.settings.darkMode;
-            document.getElementById('high-contrast').checked = this.settings.highContrast;
-            document.getElementById('reduce-motion').checked = this.settings.reduceMotion;
-            document.getElementById('ai-url').value = this.settings.aiUrl || 'http://localhost:8888';
-        }
-    }
-
-    // ===================================
-    // Utilities
-    // ===================================
-
-    startNewChat() {
-        this.messages = [];
-        this.messagesArea.innerHTML = '';
-        if (this.welcomeScreen) {
-            this.welcomeScreen.style.display = 'flex';
-        }
-        this.announce('بدء محادثة جديدة');
-    }
-
-    autoResizeTextarea() {
-        this.messageInput.style.height = 'auto';
-        this.messageInput.style.height = Math.min(this.messageInput.scrollHeight, 200) + 'px';
-    }
-
-    scrollToBottom() {
-        this.messagesArea.scrollTop = this.messagesArea.scrollHeight;
-    }
-
-    formatTime(date) {
-        return date.toLocaleTimeString('ar-SA', {
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    }
-
-    announce(message) {
-        const announcer = document.getElementById('announcements');
-        if (announcer) {
-            announcer.textContent = message;
-            setTimeout(() => {
-                announcer.textContent = '';
-            }, 1000);
+            this.recognition.start();
+            this.isRecording = true;
+            this.announce('أسمعك...');
         }
     }
 
     speak(text) {
         if (!text) return;
-
-        // أزلنا this.synth.cancel() لكي يكمل المساعد كلامه ولا يقطعه
-
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'ar-SA';
-        utterance.rate = this.settings.voiceSpeed || 1;
-        utterance.volume = (this.settings.voiceVolume / 100) || 1;
-
-        // محاولة العثور على صوت عربي عالي الجودة
-        const voices = this.synth.getVoices();
-        let arabicVoice = voices.find(voice => voice.lang === 'ar-SA' && voice.name.includes('Google'));
-        if (!arabicVoice) {
-            arabicVoice = voices.find(voice => voice.lang.startsWith('ar'));
-        }
-
-        if (arabicVoice) {
-            utterance.voice = arabicVoice;
-        }
-
-        this.synth.speak(utterance);
+        const ut = new SpeechSynthesisUtterance(text);
+        ut.lang = 'ar-SA';
+        ut.rate = this.settings.voiceSpeed || 1;
+        this.synth.speak(ut);
     }
+
+    loadSettings() {
+        const s = localStorage.getItem('guideme-settings');
+        return s ? JSON.parse(s) : { voiceSpeed: 1, voiceVolume: 80, aiUrl: 'http://localhost:8888' };
+    }
+
+    saveSettings() {
+        this.settings.aiUrl = document.getElementById('ai-url').value;
+        localStorage.setItem('guideme-settings', JSON.stringify(this.settings));
+        this.settingsModal.hidden = true;
+    }
+
+    scrollToBottom() { this.messagesArea.scrollTop = this.messagesArea.scrollHeight; }
+    announce(m) { console.log("Announce:", m); }
 }
 
-// Initialize the app
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        window.guideMeChat = new GuideMeChat();
-    });
-} else {
-    window.guideMeChat = new GuideMeChat();
-}
-
-// Load voices for speech synthesis
-if ('speechSynthesis' in window) {
-    speechSynthesis.onvoiceschanged = () => {
-        speechSynthesis.getVoices();
-    };
-}
+window.onload = () => new GuideMeChat();
