@@ -170,33 +170,56 @@ class GuideMeChat {
         // MVP Simulation without backend
         setTimeout(() => {
             this.removeMessage(thinkingId);
-            const mockReport = `
-### 📊 تقرير فحص سهولة الوصول لـ ${url}
 
-**النتيجة الإجمالية: 65/100 (تحتاج تحسين)**
-
-1. **الصور:** وجدنا 12 صورة تفتقد للنص البديل (Alt Text). قارئ الشاشة لن يستطيع وصفها للكفيف.
-2. **العناوين:** هرمية العناوين (H1, H2) غير منطقية، مما يصعب التنقل السريع.
-3. **التباين:** الألوان في أزرار "شراء" ضعيفة التباين، قد تصعب رؤيتها لضعاف البصر.
-4. **الأزرار:** توجد أزرار "أيقونات" لا تملك وسوم ARIA توضح وظيفتها.
-
-**التوصية:** نوصي بإضافة نصوص بديلة للصور وتحسين تباين الألوان فوراً.
+            const div = document.createElement('div');
+            div.className = 'message assistant';
+            div.innerHTML = `
+                <div class="message-content">
+                    <div class="audit-report">
+                        <h3>📊 تقرير فحص سهولة الوصول</h3>
+                        <div class="audit-score" aria-label="النتيجة الإجمالية 65 من مئة">65</div>
+                        <ul class="audit-list">
+                            <li class="audit-item issue">
+                                <span class="audit-item-icon">🖼️</span>
+                                <div class="audit-item-text"><b>الصور والوسائط</b> وجدنا 12 صورة تفتقد للنص البديل (Alt Text).</div>
+                            </li>
+                            <li class="audit-item issue">
+                                <span class="audit-item-icon">🏗️</span>
+                                <div class="audit-item-text"><b>هيكلية العناوين</b> تسلسل رؤوس الصفحات غير منطقي (H1 قبل H2).</div>
+                            </li>
+                            <li class="audit-item issue">
+                                <span class="audit-item-icon">🎨</span>
+                                <div class="audit-item-text"><b>تباين الألوان</b> لون النص في القائمة الجانبية باهت ويصعب قراءته.</div>
+                            </li>
+                        </ul>
+                        <div class="audit-recommendation">
+                            💡 نوصي بإضافة نصوص بديلة للصور فوراً لتحسين تجربة المكفوفين.
+                        </div>
+                    </div>
+                </div>
             `;
-            this.addMessage('assistant', mockReport);
-            this.speak(`انتهيت من فحص الموقع. النتيجة الإجمالية هي خمسة وستين من مئة. الموقع يحتاج بعض التحسينات خاصة في وصف الصور وتباين الألوان. يمكنك قراءة التقرير التفصيلي الآن.`);
+            this.messagesArea.appendChild(div);
+            this.scrollToBottom();
+            this.speak(`انتهيت من فحص الموقع. النتيجة هي خمسة وستين من مئة. هناك مشاكل في وصف الصور وهيكلية العناوين وتباين الألوان.`);
         }, 2500);
     }
 
     renderProductCard(p) {
         const div = document.createElement('div');
-        div.className = 'product-card';
+        div.className = 'message assistant';
         div.innerHTML = `
-            <img src="${p.img}" class="product-image">
-            <div class="product-info">
-                <h3>${p.name}</h3>
-                <p>${p.specs}</p>
-                <div class="product-price">${p.price}</div>
-                <button class="buy-btn" onclick="guideMe.handlePurchase('${p.name}', '${p.price}')">اختيار وشراء</button>
+            <div class="message-content" style="width: 100%;">
+                <div class="product-card" data-store="${p.store}">
+                    <img src="${p.img}" class="product-image" alt="${p.name}">
+                    <div class="product-info">
+                        <h3>${p.name}</h3>
+                        <p class="product-specs">${p.specs}</p>
+                        <div class="product-price">${p.price}</div>
+                        <button class="buy-btn" onclick="guideMe.handlePurchase('${p.name}', '${p.price}')">
+                            <span>🛒</span> اختيار وشراء
+                        </button>
+                    </div>
+                </div>
             </div>
         `;
         this.messagesArea.appendChild(div);

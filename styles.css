@@ -1044,80 +1044,205 @@ body.font-xlarge .message-text {
         font-size: var(--font-size-base);
     }
 
-    /* --- ستايلات التسوق الذكي --- */
+    /* --- ستايلات التسوق الذكي (Premium Design) --- */
     .product-card {
-        background: #ffffff;
-        border: 3px solid var(--accent-color);
-        border-radius: 20px;
-        padding: 20px;
-        margin: 15px 0;
+        background: var(--bg-primary);
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-lg);
+        margin: var(--spacing-md) 0;
         display: flex;
         flex-direction: column;
-        gap: 15px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-        color: #333;
+        gap: var(--spacing-md);
+        box-shadow: var(--shadow-md);
+        transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+        border-top: 4px solid var(--primary-blue);
+        overflow: hidden;
+        position: relative;
+    }
+
+    .product-card::after {
+        content: attr(data-store);
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: var(--primary-blue-light);
+        color: var(--primary-blue-dark);
+        padding: 2px 10px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 700;
     }
 
     .product-card:hover {
-        transform: translateY(-5px);
-        border-color: var(--accent-color);
+        transform: translateY(-8px) scale(1.01);
+        box-shadow: var(--shadow-lg);
+        border-color: var(--primary-blue);
     }
 
     .product-image {
         width: 100%;
-        height: 180px;
+        height: 200px;
         object-fit: contain;
-        border-radius: 10px;
+        border-radius: var(--radius-md);
+        background: #fff;
+        padding: 10px;
+    }
+
+    .product-info {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-xs);
     }
 
     .product-info h3 {
-        font-size: 1.3rem;
-        color: #1a1a1a;
+        font-size: var(--font-size-lg);
+        font-weight: 700;
+        color: var(--text-primary);
         margin: 0;
     }
 
     .product-price {
-        font-weight: 900;
-        font-size: 1.5rem;
-        color: #2e7d32;
+        font-weight: 800;
+        font-size: var(--font-size-xl);
+        color: var(--success-color);
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .product-price::before {
+        content: '💰';
+        font-size: 1.2rem;
     }
 
     .product-specs {
-        font-size: 0.9rem;
-        opacity: 0.8;
-    }
-
-    .product-actions {
-        display: flex;
-        gap: 10px;
+        font-size: var(--font-size-sm);
+        color: var(--text-secondary);
+        line-height: 1.4;
+        padding: 5px 0;
     }
 
     .buy-btn {
-        background: #4CAF50;
+        background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
         color: white;
         border: none;
-        padding: 18px;
-        border-radius: 12px;
+        padding: 12px 20px;
+        border-radius: var(--radius-md);
         cursor: pointer;
-        font-weight: bold;
-        font-size: 1.2rem;
-        box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+        font-weight: 700;
+        font-size: var(--font-size-base);
+        box-shadow: 0 4px 15px rgba(248, 164, 148, 0.3);
         transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
     }
 
     .buy-btn:hover {
-        background: #388e3c;
-        transform: scale(1.02);
+        filter: brightness(1.1);
+        box-shadow: 0 6px 20px rgba(248, 164, 148, 0.4);
     }
 
     .payment-success {
-        background: rgba(76, 175, 80, 0.2);
-        color: #4CAF50;
-        padding: 15px;
-        border-radius: 10px;
+        background: rgba(93, 177, 142, 0.1);
+        color: var(--success-color);
+        padding: var(--spacing-md);
+        border-radius: var(--radius-md);
         text-align: center;
-        border: 1px dashed #4CAF50;
-        margin-top: 10px;
+        border: 2px dashed var(--success-color);
+        margin-top: var(--spacing-sm);
+        font-weight: 600;
+        animation: successPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes successPop {
+        0% {
+            transform: scale(0.8);
+            opacity: 0;
+        }
+
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    /* --- ستايلات تقرير فحص المواقع (Professional Report) --- */
+    .audit-report {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-xl);
+        margin: var(--spacing-md) 0;
+        box-shadow: var(--shadow-md);
+        border-right: 5px solid var(--primary-blue);
+    }
+
+    .audit-report h3 {
+        color: var(--primary-blue-dark);
+        margin-bottom: var(--spacing-md);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: var(--font-size-xl);
+    }
+
+    .audit-score {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: var(--bg-secondary);
+        border: 3px solid var(--warning-color);
+        font-weight: 800;
+        font-size: 1.2rem;
+        margin-bottom: var(--spacing-md);
+        color: var(--text-primary);
+    }
+
+    .audit-list {
+        list-style: none;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .audit-item {
+        display: flex;
+        gap: 12px;
+        padding: 12px;
+        background: var(--bg-secondary);
+        border-radius: var(--radius-sm);
+        border-right: 3px solid transparent;
+    }
+
+    .audit-item.issue {
+        border-right-color: var(--error-color);
+    }
+
+    .audit-item-icon {
+        font-size: 1.2rem;
+    }
+
+    .audit-item-text b {
+        display: block;
+        color: var(--text-primary);
+        margin-bottom: 2px;
+    }
+
+    .audit-recommendation {
+        margin-top: var(--spacing-lg);
+        padding: var(--spacing-md);
+        background: var(--primary-blue-light);
+        border-radius: var(--radius-md);
+        color: var(--primary-blue-dark);
+        font-weight: 600;
+        font-size: var(--font-size-sm);
     }
 
     .message {
