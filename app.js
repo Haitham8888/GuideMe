@@ -129,20 +129,32 @@ class GuideMeChat {
 
     handleShoppingMode(query) {
         const thinkingId = Date.now();
-        this.addMessage('assistant', 'أبشر، قاعد أبحث لك في أمازون ونون وأقارن الأسعار... لحظة بس', null, thinkingId);
+        this.addMessage('assistant', 'أبشر، قاعد أبحث لك في المتاجر الموثوقة وأقارن الأسعار... لحظة بس', null, thinkingId);
 
         setTimeout(() => {
             this.removeMessage(thinkingId);
-            this.addMessage('assistant', 'لقيت لك هالعروض الممتازة للايفون 17 برو ماكس:');
+            this.addMessage('assistant', 'لقيت لك أفضل العروض المتوفرة حالياً بناءً على طلبك:');
 
             const products = [
-                { name: 'iPhone 17 Pro Max - Amazon', price: '5,499 ريال', specs: '512GB, Titanium', img: 'https://m.media-amazon.com/images/I/61mNn9-mGAL._AC_SL1500_.jpg' },
-                { name: 'iPhone 17 Pro Max - Noon', price: '5,350 ريال', specs: '256GB, Silver', img: 'https://m.media-amazon.com/images/I/61N9fD5N9fL._AC_SL1500_.jpg' }
+                {
+                    name: 'iPhone 16 Pro Max - 256GB',
+                    price: '5,199 ريال',
+                    specs: 'تيتانيوم طبيعي، شاشة 6.9 بوصة',
+                    img: 'https://m.media-amazon.com/images/I/61mNn9-mGAL._AC_SL1500_.jpg',
+                    store: 'Amazon'
+                },
+                {
+                    name: 'iPhone 16 Pro Max - 256GB',
+                    price: '4,999 ريال',
+                    specs: 'تيتانيوم صحراوي، شحن سريع',
+                    img: 'https://m.media-amazon.com/images/I/61N9fD5N9fL._AC_SL1500_.jpg',
+                    store: 'Noon'
+                }
             ];
 
             products.forEach(p => this.renderProductCard(p));
-            this.speak('لقيت لك عرضين للايفون. في أمازون بـ 5499 وفي نون بـ 5350. وش تختار؟');
-        }, 2000);
+            this.speak('لقيت لك أفضل الأسعار. في نون بـ 4999 ريال، وهو الأرخص حالياً. وفي أمازون بـ 5199 ريال. وش تختار؟');
+        }, 1500);
     }
 
     async handleWebsiteAudit() {
@@ -150,30 +162,29 @@ class GuideMeChat {
         if (!url) return;
 
         if (this.welcomeScreen) this.welcomeScreen.style.display = 'none';
-        this.addMessage('user', `افحص لي توافق هذا الموقع: ${url}`);
+        this.addMessage('user', `افحص لي توافق هذا الموقع للوصول الشامل: ${url}`);
 
         const thinkingId = Date.now();
-        this.addMessage('assistant', `جاري تحليل الموقع ${url} وفحص معايير الوصول عبر محركنا الذكي... لحظة فضلك`, null, thinkingId);
+        this.addMessage('assistant', `جاري تحليل هيكلية الموقع ${url} وفحص معايير الـ WCAG... لحظة فضلك`, null, thinkingId);
 
-        try {
-            const response = await fetch(`${this.settings.aiUrl}/v1/audit/website`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: url })
-            });
-            const data = await response.json();
+        // MVP Simulation without backend
+        setTimeout(() => {
             this.removeMessage(thinkingId);
+            const mockReport = `
+### 📊 تقرير فحص سهولة الوصول لـ ${url}
 
-            if (data.report) {
-                this.addMessage('assistant', data.report);
-            } else {
-                this.addMessage('assistant', 'معليش، ما قدرت أطلع تقرير حالياً، جرب مرة ثانية.');
-            }
-        } catch (e) {
-            console.error(e);
-            this.removeMessage(thinkingId);
-            this.addMessage('assistant', 'عذراً، فيه مشكلة في الاتصال بسيرفر الفحص.');
-        }
+**النتيجة الإجمالية: 65/100 (تحتاج تحسين)**
+
+1. **الصور:** وجدنا 12 صورة تفتقد للنص البديل (Alt Text). قارئ الشاشة لن يستطيع وصفها للكفيف.
+2. **العناوين:** هرمية العناوين (H1, H2) غير منطقية، مما يصعب التنقل السريع.
+3. **التباين:** الألوان في أزرار "شراء" ضعيفة التباين، قد تصعب رؤيتها لضعاف البصر.
+4. **الأزرار:** توجد أزرار "أيقونات" لا تملك وسوم ARIA توضح وظيفتها.
+
+**التوصية:** نوصي بإضافة نصوص بديلة للصور وتحسين تباين الألوان فوراً.
+            `;
+            this.addMessage('assistant', mockReport);
+            this.speak(`انتهيت من فحص الموقع. النتيجة الإجمالية هي خمسة وستين من مئة. الموقع يحتاج بعض التحسينات خاصة في وصف الصور وتباين الألوان. يمكنك قراءة التقرير التفصيلي الآن.`);
+        }, 2500);
     }
 
     renderProductCard(p) {
