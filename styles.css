@@ -137,24 +137,33 @@ body {
 .skip-link {
     position: absolute;
     top: -100px;
-    right: var(--spacing-md);
-    background: var(--primary-blue);
+    right: 50%;
+    transform: translateX(50%);
+    background: var(--primary-blue-dark);
     color: white;
-    padding: var(--spacing-sm) var(--spacing-md);
+    padding: 0.8rem 1.5rem;
     text-decoration: none;
-    font-weight: 600;
-    border-radius: var(--radius-md);
-    z-index: 1000;
-    transition: top var(--transition);
+    font-weight: 700;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    z-index: 2000;
+    transition: top 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    box-shadow: var(--shadow-lg);
 }
 
 .skip-link:focus {
-    top: var(--spacing-md);
-    outline: 2px solid var(--accent-blue);
-    outline-offset: 2px;
+    top: 0;
+    outline: 3px solid var(--accent-blue);
+    outline-offset: -4px;
 }
 
-/* Focus Styles */
+/* Focus Styles - Improved for visibility */
+*:focus-visible {
+    outline: 3px solid var(--primary-blue);
+    outline-offset: 3px;
+    box-shadow: 0 0 0 5px rgba(248, 164, 148, 0.3);
+}
+
+/* Base focus fallback */
 *:focus {
     outline: 2px solid var(--primary-blue);
     outline-offset: 2px;
@@ -164,9 +173,29 @@ body {
     outline: none;
 }
 
-*:focus-visible {
-    outline: 2px solid var(--primary-blue);
-    outline-offset: 2px;
+/* Font Size Variations for Accessibility */
+body.font-small {
+    font-size: 0.9rem;
+}
+
+body.font-medium {
+    font-size: 1.0625rem;
+}
+
+body.font-large {
+    font-size: 1.25rem;
+}
+
+body.font-xlarge {
+    font-size: 1.5rem;
+}
+
+body.font-large .message-text {
+    font-size: 1.3rem;
+}
+
+body.font-xlarge .message-text {
+    font-size: 1.6rem;
 }
 
 /* ===================================

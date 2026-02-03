@@ -35,6 +35,59 @@ body {
     overflow-x: hidden;
 }
 
+/* Screen Reader Only */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Skip Link */
+.skip-link {
+    position: absolute;
+    top: -100px;
+    right: 50%;
+    transform: translateX(50%);
+    background: var(--primary-coral-dark);
+    color: white;
+    padding: 0.8rem 1.5rem;
+    text-decoration: none;
+    font-weight: 700;
+    border-radius: 0 0 15px 15px;
+    z-index: 2000;
+    transition: top 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.skip-link:focus {
+    top: 0;
+    outline: 3px solid var(--navy);
+    outline-offset: -4px;
+}
+
+/* Focus Styles - Improved for visibility */
+*:focus-visible {
+    outline: 3px solid var(--primary-coral);
+    outline-offset: 3px;
+    box-shadow: 0 0 0 5px rgba(248, 164, 148, 0.3);
+}
+
+/* Base focus fallback */
+*:focus {
+    outline: 2px solid var(--primary-coral);
+    outline-offset: 2px;
+}
+
+*:focus:not(:focus-visible) {
+    outline: none;
+}
+
 /* Typography */
 h1,
 h2,

@@ -239,15 +239,31 @@ class GuideMeChat {
     renderMessage(msg) {
         const div = document.createElement('div');
         div.className = `message ${msg.role}`;
-        div.innerHTML = `<div class="message-content"><div class="message-text">${msg.content}</div></div>`;
+
+        // Add ARIA label for the message role
+        const roleLabel = msg.role === 'assistant' ? 'رد المساعد:' : 'رسالتك:';
+        div.setAttribute('aria-label', roleLabel);
+
+        div.innerHTML = `<div class="message-content">
+            <span class="sr-only">${roleLabel}</span>
+            <div class="message-text">${msg.content}</div>
+        </div>`;
+
         if (msg.imageUrl) {
             const img = document.createElement('img');
             img.src = msg.imageUrl;
             img.className = 'message-image';
+            img.alt = 'صورة ملتقطة من الكاميرا';
             div.querySelector('.message-content').appendChild(img);
         }
+
         this.messagesArea.appendChild(div);
         this.scrollToBottom();
+
+        // Announce new message to screen readers
+        if (msg.role === 'assistant' && msg.content !== 'جاري التفكير...') {
+            this.announce(`وصل رد جديد من المساعد: ${msg.content}`);
+        }
     }
 
     removeMessage(id) {
@@ -267,13 +283,20 @@ class GuideMeChat {
             this.cameraVideo.srcObject = this.cameraStream;
             this.cameraPreview.hidden = false;
             this.isCameraActive = true;
-        } catch (e) { this.announce('خطأ في الكاميرا'); }
+            this.announce('تم فتح الكاميرا. يمكنك الآن التقاط صورة أو بدء بث مباشر.');
+            this.cameraPreview.focus();
+        } catch (e) {
+            this.announce('خطأ في الوصول إلى الكاميرا. تأكد من إعطاء الصلاحيات.');
+            console.error(e);
+        }
     }
 
     closeCamera() {
         if (this.cameraStream) this.cameraStream.getTracks().forEach(t => t.stop());
         this.cameraPreview.hidden = true;
         this.isCameraActive = false;
+        this.announce('تم إغلاق الكاميرا.');
+        this.cameraBtn.focus();
     }
 
     captureImage() {
@@ -282,14 +305,14 @@ class GuideMeChat {
         this.cameraCanvas.height = this.cameraVideo.videoHeight;
         ctx.drawImage(this.cameraVideo, 0, 0);
         const url = this.cameraCanvas.toDataURL('image/jpeg');
-        this.addMessage('user', 'صورة ملتقطة', url);
+        this.addMessage('user', 'تم التقاط صورة لتحليلها.');
         this.closeCamera();
         this.analyzeVision(url);
     }
 
     async analyzeVision(url) {
         const tid = Date.now();
-        this.addMessage('assistant', 'أحلل الصورة...', null, tid);
+        this.addMessage('assistant', 'جاري تحليل الصورة، لحظة واحدة...', null, tid);
         try {
             const res = await fetch(`${this.settings.aiUrl}/v1/vision/analyze`, {
                 method: 'POST',
@@ -299,7 +322,10 @@ class GuideMeChat {
             const data = await res.json();
             this.removeMessage(tid);
             this.addMessage('assistant', data.content);
-        } catch (e) { this.removeMessage(tid); this.addMessage('assistant', 'خطأ في التحليل'); }
+        } catch (e) {
+            this.removeMessage(tid);
+            this.addMessage('assistant', 'عذراً، حدث خطأ أثناء تحليل الصورة. تأكد من اتصال السيرفر.');
+        }
     }
 
     toggleLive() {
@@ -316,6 +342,7 @@ class GuideMeChat {
             this.footerLiveBtn.classList.add('active');
             this.footerLiveBtn.setAttribute('aria-pressed', 'true');
         }
+        this.announce('بدأ البث المباشر. سأقوم بوصف ما أراه بشكل مستمر.');
         this.speak('بدأ البث المباشر. سأقوم بوصف ما أراه كل 5 ثوانٍ.');
 
         this.liveInterval = setInterval(() => {
@@ -331,6 +358,7 @@ class GuideMeChat {
             this.footerLiveBtn.setAttribute('aria-pressed', 'false');
         }
         clearInterval(this.liveInterval);
+        this.announce('تم إيقاف البث المباشر.');
         this.speak('تم إيقاف البث المباشر.');
     }
 
@@ -352,8 +380,12 @@ class GuideMeChat {
                 body: JSON.stringify({ image: url.split(',')[1] })
             });
             const data = await res.json();
-            this.addMessage('assistant', data.content);
-        } catch (e) { console.error('Live Vision Error:', e); }
+            if (data.content) {
+                this.addMessage('assistant', data.content);
+            }
+        } catch (e) {
+            console.error('Live Vision Error:', e);
+        }
     }
 
 
@@ -361,34 +393,94 @@ class GuideMeChat {
         if (this.isRecording) {
             this.recognition.stop();
             this.isRecording = false;
+            this.micBtn.setAttribute('aria-pressed', 'false');
         } else {
-            this.recognition.start();
-            this.isRecording = true;
-            this.announce('أسمعك...');
+            try {
+                this.recognition.start();
+                this.isRecording = true;
+                this.micBtn.setAttribute('aria-pressed', 'true');
+                this.announce('الميكروفون يعمل، أنا أسمعك الآن...');
+            } catch (e) {
+                this.announce('فشل تشغيل الميكروفون، يرجى المحاولة مرة أخرى.');
+            }
         }
     }
 
     speak(text) {
-        if (!text) return;
+        if (!text || !this.synth) return;
+
+        // Cancel current speaking
+        this.synth.cancel();
+
         const ut = new SpeechSynthesisUtterance(text);
         ut.lang = 'ar-SA';
         ut.rate = this.settings.voiceSpeed || 1;
+        ut.volume = (this.settings.voiceVolume || 80) / 100;
         this.synth.speak(ut);
     }
 
     loadSettings() {
         const s = localStorage.getItem('guideme-settings');
-        return s ? JSON.parse(s) : { voiceSpeed: 1, voiceVolume: 80, aiUrl: 'http://localhost:8888' };
+        const defaultSettings = {
+            voiceSpeed: 1,
+            voiceVolume: 80,
+            aiUrl: window.location.origin.includes('github.io') ? 'https://your-ngrok-url.ngrok-free.app' : 'http://localhost:8888',
+            fontSize: 'medium',
+            darkMode: false
+        };
+        return s ? JSON.parse(s) : defaultSettings;
     }
 
     saveSettings() {
         this.settings.aiUrl = document.getElementById('ai-url').value;
+        this.settings.voiceSpeed = parseFloat(document.getElementById('voice-speed').value);
+        this.settings.voiceVolume = parseInt(document.getElementById('voice-volume').value);
+        this.settings.fontSize = document.getElementById('font-size').value;
+        this.settings.darkMode = document.getElementById('dark-mode').checked;
+
         localStorage.setItem('guideme-settings', JSON.stringify(this.settings));
+        this.applySettings();
         this.settingsModal.hidden = true;
+        this.announce('تم حفظ الإعدادات بنجاح.');
+        document.getElementById('settings-btn').focus();
     }
 
-    scrollToBottom() { this.messagesArea.scrollTop = this.messagesArea.scrollHeight; }
-    announce(m) { console.log("Announce:", m); }
+    applySettings() {
+        // Apply font size
+        document.body.className = `font-${this.settings.fontSize}`;
+        if (this.settings.darkMode) {
+            document.body.classList.add('dark-mode');
+        } else {
+            document.body.classList.remove('dark-mode');
+        }
+
+        // Update UI elements in settings modal
+        document.getElementById('ai-url').value = this.settings.aiUrl;
+        document.getElementById('voice-speed').value = this.settings.voiceSpeed;
+        document.getElementById('voice-speed-output').textContent = this.settings.voiceSpeed + 'x';
+        document.getElementById('voice-volume').value = this.settings.voiceVolume;
+        document.getElementById('voice-volume-output').textContent = this.settings.voiceVolume + '%';
+        document.getElementById('dark-mode').checked = this.settings.darkMode;
+        document.getElementById('font-size').value = this.settings.fontSize;
+    }
+
+    scrollToBottom() {
+        this.messagesArea.scrollTop = this.messagesArea.scrollHeight;
+    }
+
+    announce(message) {
+        const announcementDiv = document.getElementById('announcements');
+        if (announcementDiv) {
+            announcementDiv.textContent = message;
+            // Clear after a while to allow same message to be announced again
+            setTimeout(() => {
+                if (announcementDiv.textContent === message) {
+                    announcementDiv.textContent = '';
+                }
+            }, 3000);
+        }
+        console.log("Accessibility Announcement:", message);
+    }
 }
 
 window.onload = () => new GuideMeChat();
